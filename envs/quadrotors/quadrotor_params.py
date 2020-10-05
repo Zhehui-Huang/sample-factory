@@ -26,3 +26,5 @@ def add_quadrotors_env_args(env, parser):
     p.add_argument('--quads_mode', default='sanity_check', type=str, choices=['circular_config', 'same_goal', 'sanity_check'], help='Choose which scanerio to run')
     p.add_argument('--extend_obs', default=False, type=str2bool, help='Drones receive relative pos and relative vel info from all other drones')
     p.add_argument('--quads_use_numba', default=False, type=str2bool, help='Whether to use numba for jit or not')
+    p.add_argument('--quads_room_size', default=10.0, type=float, help='The room size that drone would fly')
+    p.add_argument('--quads_obs_space_scale', default=1.0, type=float, help='Scale the observation space')
