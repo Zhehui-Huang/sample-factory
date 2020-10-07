@@ -28,3 +28,5 @@ def add_quadrotors_env_args(env, parser):
     p.add_argument('--quads_use_numba', default=False, type=str2bool, help='Whether to use numba for jit or not')
     p.add_argument('--quads_room_size', default=10.0, type=float, help='The room size that drone would fly')
     p.add_argument('--quads_obs_space_scale', default=1.0, type=float, help='Scale the observation space')
+    p.add_argument('--quads_sim_freq', default=200.0, type=float, help='Frequency of simulation')
+    p.add_argument('--quads_sim_steps', default=2, type=int, help='Simulation steps for each control step, which means one control step can contain multiply simulation steps')

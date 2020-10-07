@@ -16,6 +16,7 @@ def run_algorithm(cfg):
 def main():
     """Script entry point."""
     cfg = parse_args()
+    cfg.gamma = 1.0 - cfg.quads_sim_steps / cfg.quads_sim_freq
     status = run_algorithm(cfg)
     return status
 
