@@ -117,7 +117,12 @@ class QuadMultiMeanEncoder(EncoderBase):
         elif self.neighbor_obs_type == 'pos_vel':
             self.neighbor_obs_dim = neighbor_obs_dim
         elif self.neighbor_obs_type == 'attn':
-            self.neighbor_obs_dim = 11
+            attn_mode = cfg.quads_attn_mode
+            self.neighbor_obs_dim = 6
+            if 'lmap' in attn_mode:
+                self.neighbor_obs_dim += 4 ** 3 * 4
+            if 'dist' in attn_mode:
+                self.neighbor_obs_dim += 5
         elif cfg.neighbor_obs_type == 'none':
             # override these params so that neighbor encoder is a no-op during inference
             self.neighbor_obs_dim = 0
