@@ -98,7 +98,7 @@ class QuadNeighborhoodEncoderAttention(QuadNeighborhoodEncoder):
 
 class QuadMultiMeanEncoder(EncoderBase):
     # Mean embedding encoder based on the DeepRL for Swarms Paper
-    def __init__(self, cfg, obs_space, timing, self_obs_dim=18, neighbor_obs_dim=6, neighbor_hidden_size=128, obstacle_obs_dim=6, obstacle_hidden_size=32):
+    def __init__(self, cfg, obs_space, timing, self_obs_dim=18, neighbor_obs_dim=6, neighbor_hidden_size=256, obstacle_obs_dim=6, obstacle_hidden_size=32):
         super().__init__(cfg, timing)
         self.neighbor_encoder_type = 'attention'  # TODO: config
 
