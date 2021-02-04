@@ -120,7 +120,7 @@ class QuadMultiMeanEncoder(EncoderBase):
             attn_mode = cfg.quads_attn_mode
             self.neighbor_obs_dim = 6
             if 'lmap' in attn_mode:
-                self.neighbor_obs_dim += 4 ** 3 * 4
+                self.neighbor_obs_dim += (2 ** 3) * 4
             if 'dist' in attn_mode:
                 self.neighbor_obs_dim += 5
         elif cfg.neighbor_obs_type == 'none':
