@@ -4,7 +4,7 @@ _params = ParamGrid([
     ('seed', [0000]),
     ('quads_collision_hitbox_radius', [2.0, 3.0]),
     ('quads_collision_falloff_radius', [4.0, 6.0, 8.0, 10.0]),
-    ('quads_collision_smooth_max_penalty', [3.0]),
+    ('quads_collision_smooth_max_penalty', [10.0]),
 ])
 
 _experiment = Experiment(
