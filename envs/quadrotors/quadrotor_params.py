@@ -29,6 +29,9 @@ def add_quadrotors_env_args(env, parser):
     p.add_argument('--quads_vel_reward_out_range', default=0.8, type=float, help='We only use this parameter when quads_settle=True, the meaning of this parameter is that we would punish the quadrotor if it flies out of the range that we defined')
     p.add_argument('--quads_settle_range_meters', default=1.0, type=float, help='Radius of the sphere around the goal with velocity penalty to help quadrotors stop and settle at the goal')
     p.add_argument('--quads_spacing_coeff', default=0.0, type=float, help='Override default coefficient for spacing penalty between drones ')
+    p.add_argument('--quads_collision_hitbox_radius', default=2.0, type=float, help='2: when the distance between two drones are <= 2 arm_length')
+    p.add_argument('--quads_collision_falloff_radius', default=3.0, type=float, help='The falloff radius for the smooth penalty. 0: radius is 0 arm_length, which means no extra penalty')
+    p.add_argument('--quads_collision_smooth_max_penalty', default=3.0, type=float, help='It is used for smooth collision function, the idea is we also penalize drones when they are close to each otehr even they are not collide')
 
     p.add_argument('--neighbor_obs_type', default='none', type=str, choices=['none', 'pos_vel', 'pos_vel_goals', 'attn'], help='Choose what kind of obs to send to encoder.')
     p.add_argument('--quads_use_numba', default=False, type=str2bool, help='Whether to use numba for jit or not')
