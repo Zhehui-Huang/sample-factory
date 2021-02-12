@@ -2,7 +2,8 @@ from runner.run_description import RunDescription, Experiment, ParamGrid
 
 _params = ParamGrid([
     ('seed', [0000, 3333]),
-    ('quads_local_alpha', [0.2, 0.5, 0.8, 1.0]),
+    ('quads_local_coeff', [1.0, 2.0, 4.0, 8.0]),
+    ('quads_local_metric', ['dist_inverse']),
 ])
 
 _experiment = Experiment(
