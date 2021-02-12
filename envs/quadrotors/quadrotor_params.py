@@ -32,6 +32,13 @@ def add_quadrotors_env_args(env, parser):
     p.add_argument('--quads_collision_hitbox_radius', default=2.0, type=float, help='2: when the distance between two drones are <= 2 arm_length')
     p.add_argument('--quads_collision_falloff_radius', default=3.0, type=float, help='The falloff radius for the smooth penalty. 0: radius is 0 arm_length, which means no extra penalty')
     p.add_argument('--quads_collision_smooth_max_penalty', default=3.0, type=float, help='It is used for smooth collision function, the idea is we also penalize drones when they are close to each otehr even they are not collide')
+    p.add_argument('--quads_collision_smooth_pos_mode', default='linear', type=str, choices=['linear', 'linear_hard', 'inverse_linear', 'inverse_linear_hard', 'inverse_quadratic', 'inverse_quadratic_hard'], help='Decide which denominator for pos penalty function')
+
+    p.add_argument('--quads_collision_smooth_vel_coeff', default=0.1, type=float, help='This is a coeff for vel penalty')
+    p.add_argument('--quads_collision_vel_penalty_mode', default='none', type=str, choices=['none', 'linear', 'quadratic'], help='linear: denominator is dist, quadratic: denominator is dist ** 2')
+    p.add_argument('--quads_collision_vel_penalty_radius', default=6.0, type=float, help='cushion space, when dist < vel_penalty_radius * arm, if they are still trying move close to each other, we would penalize them')
+    p.add_argument('--quads_collision_smooth_vel_max_penalty', default=10.0, type=float, help='It is used for smooth collision function, the idea is we also penalize drones when they are close, and they also try to move closer')
+
 
     p.add_argument('--neighbor_obs_type', default='none', type=str, choices=['none', 'pos_vel', 'pos_vel_goals', 'attn'], help='Choose what kind of obs to send to encoder.')
     p.add_argument('--quads_use_numba', default=False, type=str2bool, help='Whether to use numba for jit or not')
