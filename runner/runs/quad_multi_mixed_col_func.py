@@ -1,7 +1,7 @@
 from runner.run_description import RunDescription, Experiment, ParamGrid
 
 _params = ParamGrid([
-    ('seed', [0000]),
+    ('seed', [0000, 3333]),
     ('quads_collision_smooth_pos_mode', ['linear', 'linear_hard', 'inverse_linear', 'inverse_linear_hard', 'inverse_quadratic', 'inverse_quadratic_hard']),
 ])
 
