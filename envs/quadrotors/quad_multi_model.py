@@ -100,6 +100,13 @@ class QuadMultiMeanEncoder(EncoderBase):
     # Mean embedding encoder based on the DeepRL for Swarms Paper
     def __init__(self, cfg, obs_space, timing, self_obs_dim=18, neighbor_obs_dim=6, neighbor_hidden_size=256, obstacle_obs_dim=6, obstacle_hidden_size=32):
         super().__init__(cfg, timing)
+        if cfg.quads_obs_repr == 'xyz_vxyz_R_omega':
+            self_obs_dim = 18
+        elif cfg.quads_obs_repr == 'xyz_vxyz_R_omega_wall':
+            self_obs_dim = 24
+        else:
+            raise NotImplementedError(f'Layer {cfg.quads_obs_repr} not supported!')
+
         self.neighbor_encoder_type = 'attention'  # TODO: config
 
         self.self_obs_dim = self_obs_dim
