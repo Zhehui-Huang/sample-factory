@@ -82,7 +82,7 @@ def make_quadrotor_env_multi(cfg, **kwargs):
         collision_hitbox_radius=cfg.quads_collision_hitbox_radius, collision_falloff_radius=cfg.quads_collision_falloff_radius,
         collision_smooth_max_penalty=cfg.quads_collision_smooth_max_penalty, collision_smooth_pos_mode=cfg.quads_collision_smooth_pos_mode, collision_smooth_vel_coeff=cfg.quads_collision_smooth_vel_coeff,
         collision_vel_penalty_mode=cfg.quads_collision_vel_penalty_mode, collision_vel_penalty_radius=cfg.quads_collision_vel_penalty_radius,
-        collision_smooth_vel_max_penalty=cfg.quads_collision_smooth_vel_max_penalty
+        collision_smooth_vel_max_penalty=cfg.quads_collision_smooth_vel_max_penalty, obs_repr=cfg.quads_obs_repr
     )
 
     reward_shaping = copy.deepcopy(DEFAULT_QUAD_REWARD_SHAPING)
