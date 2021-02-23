@@ -92,7 +92,7 @@ def make_quadrotor_env_multi(cfg, **kwargs):
         collision_hitbox_radius=cfg.quads_collision_hitbox_radius, collision_falloff_radius=cfg.quads_collision_falloff_radius,
         local_metric=cfg.quads_local_metric,
         local_coeff=cfg.quads_local_coeff,  # how much velocity matters in "distance" calculation
-        use_replay_buffer=use_replay_buffer,
+        use_replay_buffer=use_replay_buffer, obstacle_obs_mode=cfg.quads_obstacle_obs_mode
     )
 
     if use_replay_buffer:
