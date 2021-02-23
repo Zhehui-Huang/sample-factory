@@ -3,12 +3,12 @@ from runner.runs.quad_multi_mix_baseline import QUAD_BASELINE_CLI
 
 _params = ParamGrid([
     ('seed', [3333]),
-    ('num_workers', [8]),
+    ('num_workers', [16]),
     ('quads_obstacle_mode', ['dynamic']),
     ('quads_obstacle_num', [1]),
     ('quads_obstacle_type', ['sphere']),
     ('quads_collision_obstacle_reward', [5.0]),
-    ('quads_obstacle_obs_mode', ['relative', 'absolute', 'half_relative']),
+    ('quads_obstacle_obs_mode', ['absolute']),
 ])
 
 _experiment = Experiment(

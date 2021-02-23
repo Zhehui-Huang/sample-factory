@@ -107,7 +107,7 @@ class QuadMultiEncoder(EncoderBase):
         else:
             raise NotImplementedError(f'Layer {cfg.quads_obs_repr} not supported!')
 
-        self.neighbor_hidden_size = cfg.quads_neighbor_hidden_size
+        self.neighbor_hidden_size = cfg.hidden_size
 
         self.neighbor_obs_type = cfg.neighbor_obs_type
         self.use_spectral_norm = cfg.use_spectral_norm
