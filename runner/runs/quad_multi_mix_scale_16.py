@@ -2,8 +2,10 @@ from runner.run_description import RunDescription, Experiment, ParamGrid
 from runner.runs.quad_multi_mix_baseline import QUAD_BASELINE_CLI
 
 _params = ParamGrid([
-    ('seed', [1111, 2222, 3333, 4444]),
+    ('seed', [3333]),
     ('quads_num_agents', [16]),
+    ('num_workers', [12]),
+    ('num_envs_per_worker', [2]),
 ])
 
 _experiment = Experiment(
