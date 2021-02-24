@@ -59,3 +59,4 @@ def add_quadrotors_env_args(env, parser):
     p.add_argument('--anneal_collision_steps', default=0.0, type=float, help='Anneal collision penalties over this many steps. Default (0.0) is no annealing')
     p.add_argument('--quads_obstacle_obs_mode', default='relative', type=str, choices=['relative', 'absolute', 'half_relative'],  help='Choose the type of force to use')
     p.add_argument('--quads_obstacle_hidden_size', default=32, type=int, help='Choose the type of force to use')
+    p.add_argument('--quads_collision_obst_smooth_max_penalty', default=10.0, type=float, help='The upper bound of the collision function given distance among drones')

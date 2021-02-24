@@ -104,6 +104,7 @@ def make_quadrotor_env_multi(cfg, **kwargs):
 
     reward_shaping['quad_rewards']['quadsettle'] = cfg.quads_settle_reward
     reward_shaping['quad_rewards']['quadcol_bin_obst'] = cfg.quads_collision_obstacle_reward
+    reward_shaping['quad_rewards']['quadcol_bin_obst_smooth_max'] = cfg.quads_collision_obst_smooth_max_penalty
     reward_shaping['quad_rewards']['quadcol_bin'] = cfg.quads_collision_reward
     reward_shaping['quad_rewards']['quadcol_bin_smooth_max'] = cfg.quads_collision_smooth_max_penalty
 
