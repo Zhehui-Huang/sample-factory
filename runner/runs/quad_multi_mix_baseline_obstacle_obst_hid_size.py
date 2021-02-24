@@ -9,7 +9,7 @@ _params = ParamGrid([
     ('quads_obstacle_type', ['sphere']),
     ('quads_collision_obstacle_reward', [5.0]),
     ('quads_obstacle_obs_mode', ['absolute']),
-    ('quads_obstacle_hidden_size', [256]),
+    ('quads_obstacle_hidden_size', [32]),
 ])
 
 _experiment = Experiment(
