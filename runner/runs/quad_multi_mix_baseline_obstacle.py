@@ -9,6 +9,8 @@ _params = ParamGrid([
     ('quads_obstacle_type', ['sphere']),
     ('quads_collision_obstacle_reward', [5.0]),
     ('quads_obstacle_obs_mode', ['absolute']),
+    ('quads_collision_obst_smooth_max_penalty', [10.0]),
+    ('quads_obstacle_hidden_size', [32]),
 ])
 
 _experiment = Experiment(
@@ -17,7 +19,7 @@ _experiment = Experiment(
     _params.generate_params(randomize=False),
 )
 
-RUN_DESCRIPTION = RunDescription('quads_multi_mix_baseline_8a_sphere_obstacle_v115', experiments=[_experiment])
+RUN_DESCRIPTION = RunDescription('quads_multi_mix_baseline_8a_basic_sphere_obstacle_v115', experiments=[_experiment])
 
 # On Brain server, when you use num_workers = 72, if the system reports: Resource temporarily unavailable,
 # then, try to use two commands below
