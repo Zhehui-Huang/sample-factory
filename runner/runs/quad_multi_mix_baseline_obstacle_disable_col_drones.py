@@ -16,7 +16,7 @@ _params = ParamGrid([
 ])
 
 _experiment = Experiment(
-    'quad_mix_baseline-8_mixed_one_sphere_obstacle',
+    'quad_mix_baseline_disable_quad_collisions-8_mixed_one_sphere_obstacle',
     QUAD_BASELINE_CLI,
     _params.generate_params(randomize=False),
 )
