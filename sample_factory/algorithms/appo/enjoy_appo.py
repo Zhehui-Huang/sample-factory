@@ -67,6 +67,10 @@ def enjoy(cfg, max_num_frames=1e9):
     episode_reward = np.zeros(env.num_agents)
     finished_episode = [False] * env.num_agents
 
+    num_episodes = 0
+    num_collisions = 0
+    dist_to_target = 0
+
     with torch.no_grad():
         while not max_frames_reached(num_frames):
             obs_torch = AttrDict(transform_dict_observations(obs))
@@ -137,6 +141,14 @@ def enjoy(cfg, max_num_frames=1e9):
 
                     log.info('Avg episode rewards: %s, true rewards: %s', avg_episode_rewards_str, avg_true_reward_str)
                     log.info('Avg episode reward: %.3f, avg true_reward: %.3f', np.mean([np.mean(episode_rewards[i]) for i in range(env.num_agents)]), np.mean([np.mean(true_rewards[i]) for i in range(env.num_agents)]))
+
+                    num_episodes += 1
+                    num_collisions += infos[0]['episode_extra_stats']['num_collisions_after_settle']
+                    dist_to_target += sum([infos[i]['rewards']['rewraw_pos'] for i in range(len(infos))])
+                    log.debug(f'Episode {num_episodes}')
+                    log.debug(f'Total collisions: {num_collisions}')
+                    log.debug(f'Avg collisions for episode {num_episodes}: {num_collisions / num_episodes}')
+                    log.debug(f'Avg pos rew for episode {num_episodes}: {-dist_to_target / num_episodes}')
 
                 # VizDoom multiplayer stuff
                 # for player in [1, 2, 3, 4, 5, 6, 7, 8]:
