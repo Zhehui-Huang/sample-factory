@@ -174,10 +174,10 @@ class PopulationBasedTraining:
         if random.random() > self.cfg.pbt_mutation_rate:
             return param
 
-        if param != default_param and random.random() < 0.05:
-            # small chance to replace parameter with a default value
-            log.debug('%s changed to default value %r', param_name, default_param)
-            return default_param
+        # if param != default_param and random.random() < 0.05:
+        #     # small chance to replace parameter with a default value
+        #     log.debug('%s changed to default value %r', param_name, default_param)
+        #     return default_param
 
         if param_name in SPECIAL_PERTURBATION:
             new_value = SPECIAL_PERTURBATION[param_name](param, self.cfg)
