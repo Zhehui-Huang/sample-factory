@@ -6,5 +6,5 @@ python -m sample_factory.launcher.run \
 --pause_between=1 \
 --slurm_print_only=False \
 --slurm_sbatch_template=/home/zhehui/reward_decrease/slurm/sbatch_timeout.sh \
---slurm_workdir=/home/zhehui/reward_decrease/slurm/mujoco \
+--slurm_workdir=/home/zhehui/reward_decrease/slurm/mujoco/hopper \
 --run=sf_examples.mujoco.experiments.mujoco_hopper
