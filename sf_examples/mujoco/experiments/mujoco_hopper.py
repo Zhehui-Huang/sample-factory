@@ -16,7 +16,8 @@ _experiments = [
     Experiment(
         "mujoco_all_envs",
         "python -m sf_examples.mujoco.train_mujoco --algo=APPO --with_wandb=True --wandb_tags mujoco "
-        "--wandb_user=reward_decrease --train_for_env_steps=500000000",
+        "--wandb_user=multi-drones --wandb_project=zh-reward-decrease --wandb_tags mujoco hopper "
+        "--train_for_env_steps=500000000",
         _params.generate_params(randomize=False),
     ),
 ]
