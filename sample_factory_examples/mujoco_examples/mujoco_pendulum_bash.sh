@@ -1,5 +1,5 @@
 python -m sample_factory.runner.run \
---backend=slurm \
+--runner=slurm \
 --experiment_suffix=slurm \
 --slurm_gpus_per_job=1 \
 --slurm_cpus_per_gpu=16 \
