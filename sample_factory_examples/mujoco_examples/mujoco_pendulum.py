@@ -16,7 +16,7 @@ _params = ParamGrid(
 _experiments = [
     Experiment(
         "mujoco_all_envs",
-        "python -m sample_factory_examples.mujoco_examples.train_mujoco --algo=APPO --with_wandb=True --wandb_tags mujoco "
+        "python -m sample_factory_examples.mujoco_examples.train_mujoco --algo=APPO --with_wandb=True "
         "--wandb_user=multi-drones --wandb_project=zh-reward-decrease --wandb_tags mujoco pendulum 0b7c22ca4de0d5fc7f4f79e76afbfc7ef67ddd87 "
         "--train_for_env_steps=100000000",
         _params.generate_params(randomize=False),
