@@ -17,7 +17,7 @@ from sample_factory.algo.utils.action_distributions import get_action_distributi
 from sample_factory.algo.utils.env_info import EnvInfo
 from sample_factory.algo.utils.misc import LEARNER_ENV_STEPS, POLICY_ID_KEY, STATS_KEY, TRAIN_STATS, memory_stats
 from sample_factory.algo.utils.model_sharing import ParameterServer
-from sample_factory.algo.utils.optimizers import Lamb
+from sample_factory.algo.utils.optimizers import Lamb, Lion
 from sample_factory.algo.utils.rl_utils import gae_advantages, prepare_and_normalize_obs
 from sample_factory.algo.utils.shared_buffers import policy_device
 from sample_factory.algo.utils.tensor_dict import TensorDict, shallow_recursive_copy
@@ -225,7 +225,7 @@ class Learner(Configurable):
 
         params = list(self.actor_critic.parameters())
 
-        optimizer_cls = dict(adam=torch.optim.Adam, lamb=Lamb)
+        optimizer_cls = dict(adam=torch.optim.Adam, lamb=Lamb, Lion=Lion)
         if self.cfg.optimizer not in optimizer_cls:
             raise RuntimeError(f"Unknown optimizer {self.cfg.optimizer}")
 

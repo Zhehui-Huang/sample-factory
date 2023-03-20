@@ -277,7 +277,7 @@ def add_rl_args(p: ArgumentParser):
     )
 
     # optimization
-    p.add_argument("--optimizer", default="adam", type=str, choices=["adam", "lamb"], help="Type of optimizer to use")
+    p.add_argument("--optimizer", default="adam", type=str, choices=["adam", "lamb", "lion"], help="Type of optimizer to use")
     p.add_argument(
         "--adam_eps",
         default=1e-6,

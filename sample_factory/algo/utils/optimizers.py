@@ -12,17 +12,17 @@ from torch.optim import Optimizer
 
 class Lamb(Optimizer):
     def __init__(
-        self,
-        params,
-        bias_correction=True,
-        lr=1e-3,
-        betas=(0.9, 0.999),
-        eps=1e-6,
-        weight_decay=1e-4,
-        min_trust=0.01,
-        use_look_ahead=False,
-        look_ahead_alpha=0.5,
-        look_ahead_k=10,
+            self,
+            params,
+            bias_correction=True,
+            lr=1e-3,
+            betas=(0.9, 0.999),
+            eps=1e-6,
+            weight_decay=1e-4,
+            min_trust=0.01,
+            use_look_ahead=False,
+            look_ahead_alpha=0.5,
+            look_ahead_k=10,
     ):
         if not 0.0 <= lr:
             raise ValueError("Invalid learning rate: {}".format(lr))
@@ -147,7 +147,7 @@ class Lamb(Optimizer):
             ptr = 0
             for p in group["list_params"]:
                 weight_norm = torch.norm(p.data.detach()).item()
-                step_norm = torch.norm(adam_step[ptr : ptr + p.numel()].data.detach()).item()
+                step_norm = torch.norm(adam_step[ptr: ptr + p.numel()].data.detach()).item()
 
                 if weight_norm == 0 or step_norm == 0 or min_trust == 1.0:
                     trust_ratio = 1
@@ -155,7 +155,7 @@ class Lamb(Optimizer):
                     trust_ratio = min(weight_norm, 10.0) / step_norm
                     trust_ratio = min(max(trust_ratio, min_trust), 1.0 / min_trust)
 
-                adam_step[ptr : ptr + p.numel()].mul_(trust_ratio)
+                adam_step[ptr: ptr + p.numel()].mul_(trust_ratio)
                 ptr += p.numel()
 
         p = group["params"][0]
@@ -184,5 +184,69 @@ class Lamb(Optimizer):
                 self._step_flat_params(group)
             else:
                 self._step_list_params(group)
+
+        return loss
+
+
+class Lion(Optimizer):
+    r"""Implements Lion algorithm."""
+
+    def __init__(self, params, lr=1e-4, betas=(0.9, 0.99), weight_decay=0.0, eps=0.0):
+        """Initialize the hyperparameters.
+    Args:
+      params (iterable): iterable of parameters to optimize or dicts defining
+        parameter groups
+      lr (float, optional): learning rate (default: 1e-4)
+      betas (Tuple[float, float], optional): coefficients used for computing
+        running averages of gradient and its square (default: (0.9, 0.99))
+      weight_decay (float, optional): weight decay coefficient (default: 0)
+    """
+
+        if not 0.0 <= lr:
+            raise ValueError('Invalid learning rate: {}'.format(lr))
+        if not 0.0 <= betas[0] < 1.0:
+            raise ValueError('Invalid beta parameter at index 0: {}'.format(betas[0]))
+        if not 0.0 <= betas[1] < 1.0:
+            raise ValueError('Invalid beta parameter at index 1: {}'.format(betas[1]))
+        defaults = dict(lr=lr, betas=betas, weight_decay=weight_decay)
+        super().__init__(params, defaults)
+
+    @torch.no_grad()
+    def step(self, closure=None):
+        """Performs a single optimization step.
+    Args:
+      closure (callable, optional): A closure that reevaluates the model
+        and returns the loss.
+    Returns:
+      the loss.
+    """
+        loss = None
+        if closure is not None:
+            with torch.enable_grad():
+                loss = closure()
+
+        for group in self.param_groups:
+            for p in group['params']:
+                if p.grad is None:
+                    continue
+
+                # Perform stepweight decay
+                p.data.mul_(1 - group['lr'] * group['weight_decay'])
+
+                grad = p.grad
+                state = self.state[p]
+                # State initialization
+                if len(state) == 0:
+                    # Exponential moving average of gradient values
+                    state['exp_avg'] = torch.zeros_like(p)
+
+                exp_avg = state['exp_avg']
+                beta1, beta2 = group['betas']
+
+                # Weight update
+                update = exp_avg * beta1 + grad * (1 - beta1)
+                p.add_(torch.sign(update), alpha=-group['lr'])
+                # Decay the momentum running average coefficient
+                exp_avg.mul_(beta2).add_(grad, alpha=1 - beta2)
 
         return loss
