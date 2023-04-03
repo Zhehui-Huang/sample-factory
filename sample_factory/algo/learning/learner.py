@@ -955,6 +955,17 @@ class Learner(Configurable):
                 # There was a bug in older versions of isaacgym where timeouts were reported for non-terminal states.
                 buff["rewards"].add_(self.cfg.gamma * denormalized_values[:, :-1] * buff["time_outs"] * buff["dones"])
 
+            # add max entropy to the rewards
+            # if self.cfg.max_entropy_coeff != 0.0:
+            if self.cfg.max_entropy_coeff != 0.0:
+                with torch.no_grad(), self.timing.add_time('max_entropy'):
+                    action_distr_params = buff["action_logits"].reshape(
+                        (-1, buff["action_logits"].shape[-1]))  # [E*T, A]
+                    # entropies = get_action_distribution(self.env_info.action_space, torch.Tensor(action_distr_params)).entropy().numpy()  # [E*T]
+                    entropies = get_action_distribution(self.env_info.action_space, torch.Tensor(action_distr_params)).entropy()  # [E*T]
+                    entropies = entropies.reshape((-1, self.cfg.rollout))  # [E, T]
+                    buff["rewards"] += self.cfg.max_entropy_coeff * entropies  # [E, T]
+
             if not self.cfg.with_vtrace:
                 # calculate advantage estimate (in case of V-trace it is done separately for each minibatch)
                 buff["advantages"] = gae_advantages(
