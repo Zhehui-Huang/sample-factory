@@ -962,7 +962,7 @@ class Learner(Configurable):
                     action_distr_params = buff["action_logits"].reshape(
                         (-1, buff["action_logits"].shape[-1]))  # [E*T, A]
                     # entropies = get_action_distribution(self.env_info.action_space, torch.Tensor(action_distr_params)).entropy().numpy()  # [E*T]
-                    entropies = get_action_distribution(self.env_info.action_space, torch.Tensor(action_distr_params)).entropy()  # [E*T]
+                    entropies = get_action_distribution(self.env_info.action_space, action_distr_params).entropy()  # [E*T]
                     entropies = entropies.reshape((-1, self.cfg.rollout))  # [E, T]
                     buff["rewards"] += self.cfg.max_entropy_coeff * entropies  # [E, T]
 
