@@ -238,6 +238,15 @@ def add_rl_args(p: ArgumentParser):
         "Empirically, symmetric KL-divergence yielded slightly better results on some problems.",
     )
 
+    # Max entropy objective
+    p.add_argument(
+        "--max_entropy_coeff",
+        default=0.0,
+        type=float,
+        help='Coefficient for max entropy term added directly to rewards. 0 means no max entropy term to env rewards. '
+             'Note that this is different from exploration loss (see https://arxiv.org/abs/1805.00909)'
+    )
+
     # more specific to policy gradient algorithms or PPO
     p.add_argument(
         "--gae_lambda",
