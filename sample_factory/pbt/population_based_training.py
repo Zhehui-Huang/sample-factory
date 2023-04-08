@@ -70,6 +70,7 @@ HYPERPARAMS_TO_TUNE = {
 # if not specified then tune all rewards
 REWARD_CATEGORIES_TO_TUNE = {
     "doom_": ["delta", "selected_weapon"],
+    "quadrotor_mu": [],
 }
 
 # HYPERPARAMS_TO_TUNE_EXTENDED = {
