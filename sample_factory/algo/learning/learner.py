@@ -32,6 +32,8 @@ from sample_factory.utils.timing import Timing
 from sample_factory.utils.typing import ActionDistribution, Config, InitModelData, PolicyID
 from sample_factory.utils.utils import ensure_dir_exists, experiment_dir, log
 
+MIN_KL_LOSS_COEFF = 1e-2
+
 
 class LearningRateScheduler:
     def update(self, current_lr, recent_kls):
@@ -176,6 +178,20 @@ class Learner(Configurable):
 
         self.is_initialized = False
 
+        # xPPO
+        # =====================================================================
+        self._kl_loss_coeff_param = torch.nn.Parameter(torch.tensor(1.0))
+        self._kl_loss_coeff_lr = 0.1
+        self._kl_loss_coeff_momentum = 0.999
+        self._use_minibatch_kl_penalty = True
+        self._optimize_log_loss_coeff = False
+        self.target_kl = 0.2
+        self._initial_policy_opt_state_dict = None
+        self._reset_policy_optimizer = True
+        self._kl_target_stat = "max"
+        self._second_penalty_loop = True
+        # =====================================================================
+
     def init(self) -> InitModelData:
         if self.cfg.exploration_loss_coeff == 0.0:
             self.exploration_loss_func = lambda action_distr, valids, num_invalids: 0.0
@@ -186,6 +202,8 @@ class Learner(Configurable):
         else:
             raise NotImplementedError(f"{self.cfg.exploration_loss} not supported!")
 
+        # xPPO
+        # =====================================================================
         if self.cfg.kl_loss_coeff == 0.0:
             if is_continuous_action_space(self.env_info.action_space):
                 log.warning(
@@ -195,6 +213,7 @@ class Learner(Configurable):
             self.kl_loss_func = lambda action_space, action_logits, distribution, valids, num_invalids: (None, 0.0)
         else:
             self.kl_loss_func = self._kl_loss
+        # =====================================================================
 
         # initialize the Torch modules
         if self.cfg.seed is None:
@@ -239,6 +258,11 @@ class Learner(Configurable):
             betas=(self.cfg.adam_beta1, self.cfg.adam_beta2),
             eps=self.cfg.adam_eps,
         )
+
+        # xPPO
+        # =====================================================================
+        self._initial_policy_opt_state_dict = self.optimizer.state_dict()
+        # =====================================================================
 
         self.load_from_checkpoint(self.policy_id)
         self.param_server.init(self.actor_critic, self.train_step, self.device)
@@ -423,11 +447,14 @@ class Learner(Configurable):
             self.policy_to_load = None
 
     @staticmethod
-    def _policy_loss(ratio, adv, clip_ratio_low, clip_ratio_high, valids, num_invalids: int):
-        clipped_ratio = torch.clamp(ratio, clip_ratio_low, clip_ratio_high)
-        loss_unclipped = ratio * adv
-        loss_clipped = clipped_ratio * adv
-        loss = torch.min(loss_unclipped, loss_clipped)
+    def _policy_loss(ratio, adv, valids, num_invalids: int):
+        # xPPO
+        # =====================================================================
+        # clipped_ratio = torch.clamp(ratio, clip_ratio_low, clip_ratio_high)
+        loss = ratio * adv
+        # loss_clipped = ratio * adv
+        # loss = torch.min(loss_unclipped, loss_clipped)
+        # =====================================================================
         loss = masked_select(loss, valids, num_invalids)
         loss = -loss.mean()
 
@@ -461,7 +488,33 @@ class Learner(Configurable):
         kl_old = masked_select(kl_old, valids, num_invalids)
         kl_loss = kl_old.mean()
 
-        kl_loss *= self.cfg.kl_loss_coeff
+        # xPPO
+        # =====================================================================
+        # kl_loss *= self.cfg.kl_loss_coeff
+        # xPPO
+        # =====================================================================
+        if self._optimize_log_loss_coeff:
+            # Optimizing the log loss coeff, therefore need to take
+            # exp to get loss coeff
+            loss_coeff_param = self._kl_loss_coeff_param.exp2()
+        else:
+            loss_coeff_param = self._kl_loss_coeff_param
+
+        kl_loss = loss_coeff_param.detach() * kl_loss
+
+        # If optimizing the log loss coeff, then
+        # self._kl_loss_coeff_param is the "log loss coeff"
+        if self._kl_target_stat == "mean":
+            kl_loss += self._kl_loss_coeff_param * (
+                    self.target_kl - kl_old.mean().detach()
+            )
+        elif self._kl_target_stat == "max":
+            kl_loss += self._kl_loss_coeff_param * (
+                    self.target_kl - kl_old.max().detach()
+            )
+        else:
+            raise ValueError("Invalid kl_target_stat")
+        # =====================================================================
 
         return kl_old, kl_loss
 
@@ -534,11 +587,13 @@ class Learner(Configurable):
     ) -> Tuple[ActionDistribution, Tensor, Tensor | float, Optional[Tensor], Tensor | float, Tensor, Dict]:
         with torch.no_grad(), self.timing.add_time("losses_init"):
             recurrence: int = self.cfg.recurrence
-
+            # xPPO
+            # =====================================================================
             # PPO clipping
-            clip_ratio_high = 1.0 + self.cfg.ppo_clip_ratio  # e.g. 1.1
+            # clip_ratio_high = 1.0 + self.cfg.ppo_clip_ratio  # e.g. 1.1
             # this still works with e.g. clip_ratio = 2, while PPO's 1-r would give negative ratio
-            clip_ratio_low = 1.0 / clip_ratio_high
+            # clip_ratio_low = 1.0 / clip_ratio_high
+            # =====================================================================
             clip_value = self.cfg.ppo_clip_value
 
             valids = mb.valids
@@ -643,7 +698,10 @@ class Learner(Configurable):
 
         with self.timing.add_time("losses"):
             # noinspection PyTypeChecker
-            policy_loss = self._policy_loss(ratio, adv, clip_ratio_low, clip_ratio_high, valids, num_invalids)
+            # xPPO
+            # =====================================================================
+            policy_loss = self._policy_loss(ratio, adv, valids, num_invalids)
+            # =====================================================================
             exploration_loss = self.exploration_loss_func(action_distribution, valids, num_invalids)
             kl_old, kl_loss = self.kl_loss_func(
                 self.actor_critic.action_space, mb.action_logits, action_distribution, valids, num_invalids
@@ -653,8 +711,8 @@ class Learner(Configurable):
 
         loss_summaries = dict(
             ratio=ratio,
-            clip_ratio_low=clip_ratio_low,
-            clip_ratio_high=clip_ratio_high,
+            # clip_ratio_low=clip_ratio_low,
+            # clip_ratio_high=clip_ratio_high,
             values=result["values"],
             adv=adv,
             adv_std=adv_std,
@@ -663,10 +721,161 @@ class Learner(Configurable):
 
         return action_distribution, policy_loss, exploration_loss, kl_old, kl_loss, value_loss, loss_summaries
 
+    def _minibatch_step(self, minibatches, batch_num, gpu_buffer, num_invalids, epoch_actor_losses, kl_loss_coeff_opt,
+                        num_sgd_steps, recent_kls, use_pg_loss, force_summaries, summaries_batch, summaries_epoch,
+                        with_summaries, timing, experience_size, epoch):
+        with torch.no_grad(), timing.add_time("minibatch_init"):
+            if use_pg_loss:
+                indices = minibatches[batch_num]
+                # current minibatch consisting of short trajectory segments with length == recurrence
+                mb = self._get_minibatch(gpu_buffer, indices)
+            else:
+                mb = gpu_buffer
+
+            # enable syntactic sugar that allows us to access dict's keys as object attributes
+            mb = AttrDict(mb)
+
+        with timing.add_time("calculate_losses"):
+            (
+                action_distribution,
+                policy_loss,
+                exploration_loss,
+                kl_old,
+                kl_loss,
+                value_loss,
+                loss_summaries,
+            ) = self._calculate_losses(mb, num_invalids)
+
+        with timing.add_time("losses_postprocess"):
+            # xPPO
+            # =====================================================================
+            # noinspection PyTypeChecker
+            if use_pg_loss:
+                actor_loss: Tensor = policy_loss + exploration_loss + kl_loss
+                critic_loss = value_loss
+                loss: Tensor = actor_loss + critic_loss
+                epoch_actor_losses[batch_num] = float(actor_loss)
+            else:
+                loss: Tensor = kl_loss
+            # =====================================================================
+
+            high_loss = 30.0
+            if torch.abs(loss) > high_loss:
+                log.warning(
+                    "High loss value: l:%.4f pl:%.4f vl:%.4f exp_l:%.4f kl_l:%.4f (recommended to adjust the --reward_scale parameter)",
+                    to_scalar(loss),
+                    to_scalar(policy_loss),
+                    to_scalar(value_loss),
+                    to_scalar(exploration_loss),
+                    to_scalar(kl_loss),
+                )
+
+                # perhaps something weird is happening, we definitely want summaries from this step
+                force_summaries = True
+
+        with torch.no_grad(), timing.add_time("kl_divergence"):
+            # if kl_old is not None it is already calculated above
+            if kl_old is None:
+                # calculate KL-divergence with the behaviour policy action distribution
+                old_action_distribution = get_action_distribution(
+                    self.actor_critic.action_space,
+                    mb.action_logits,
+                )
+                kl_old = action_distribution.kl_divergence(old_action_distribution)
+                kl_old = masked_select(kl_old, mb.valids, num_invalids)
+
+            kl_old_mean = float(kl_old.mean().item())
+            recent_kls.append(kl_old_mean)
+            if kl_old.numel() > 0 and kl_old.max().item() > 100:
+                log.warning(f"KL-divergence is very high: {kl_old.max().item():.4f}")
+
+        # update the weights
+        with timing.add_time("update"):
+            # xPPO
+            # =====================================================================
+            kl_loss_coeff_opt.zero_grad()
+            # =====================================================================
+            # following advice from https://youtu.be/9mS1fIYj1So set grad to None instead of optimizer.zero_grad()
+            for p in self.actor_critic.parameters():
+                p.grad = None
+
+            loss.backward()
+
+            if self.cfg.max_grad_norm > 0.0:
+                with timing.add_time("clip"):
+                    torch.nn.utils.clip_grad_norm_(self.actor_critic.parameters(), self.cfg.max_grad_norm)
+
+            curr_policy_version = self.train_step  # policy version before the weight update
+
+            actual_lr = self.curr_lr
+            if num_invalids > 0:
+                # if we have masked (invalid) data we should reduce the learning rate accordingly
+                # this prevents a situation where most of the data in the minibatch is invalid
+                # and we end up doing SGD with super noisy gradients
+                actual_lr = self.curr_lr * (experience_size - num_invalids) / experience_size
+            self._apply_lr(actual_lr)
+
+            with self.param_server.policy_lock:
+                self.optimizer.step()
+            # xPPO
+            # =====================================================================
+            kl_loss_coeff_opt.step()
+
+            if self._optimize_log_loss_coeff:
+                if self._kl_loss_coeff_param < 1 + MIN_KL_LOSS_COEFF:
+                    with torch.no_grad():
+                        self._kl_loss_coeff_param.copy_(1 + MIN_KL_LOSS_COEFF)
+                    assert self._kl_loss_coeff_param >= 1 + MIN_KL_LOSS_COEFF
+            else:
+                if self._kl_loss_coeff_param < MIN_KL_LOSS_COEFF:
+                    with torch.no_grad():
+                        self._kl_loss_coeff_param.copy_(MIN_KL_LOSS_COEFF)
+                    assert self._kl_loss_coeff_param >= MIN_KL_LOSS_COEFF
+            # kl_loss_coeffs.append(self._kl_loss_coeff_param.item())
+
+            # =====================================================================
+            num_sgd_steps += 1
+
+        with torch.no_grad(), timing.add_time("after_optimizer"):
+            self._after_optimizer_step()
+
+            if self.lr_scheduler.invoke_after_each_minibatch():
+                self.curr_lr = self.lr_scheduler.update(self.curr_lr, recent_kls)
+
+            # collect and report summaries
+            should_record_summaries = with_summaries
+            should_record_summaries &= epoch == summaries_epoch and batch_num == summaries_batch
+            should_record_summaries |= force_summaries
+            if should_record_summaries:
+                # hacky way to collect all of the intermediate variables for summaries
+                summary_vars = {**locals(), **loss_summaries}
+                stats_and_summaries = self._record_summaries(AttrDict(summary_vars))
+                del summary_vars
+                force_summaries = False
+
+            # make sure everything (such as policy weights) is committed to shared device memory
+            synchronize(self.cfg, self.device)
+            # this will force policy update on the inference worker (policy worker)
+            self.policy_versions_tensor[self.policy_id] = self.train_step
+
+        return force_summaries, kl_old, num_sgd_steps, summaries_batch, kl_loss_coeff_opt, recent_kls, with_summaries
+
     def _train(
         self, gpu_buffer: TensorDict, batch_size: int, experience_size: int, num_invalids: int
     ) -> Optional[AttrDict]:
         timing = self.timing
+
+        # xPPO
+        # =====================================================================
+        self._kl_loss_coeff_param = torch.nn.Parameter(torch.tensor(1.0))
+        # TODO: SGD or Adam ?
+        kl_loss_coeff_opt = torch.optim.SGD(
+            [self._kl_loss_coeff_param],
+            lr=self._kl_loss_coeff_lr,
+            momentum=self._kl_loss_coeff_momentum,
+        )
+        # =====================================================================
+
         with torch.no_grad():
             early_stopping_tolerance = 1e-6
             early_stop = False
@@ -699,6 +908,10 @@ class Learner(Configurable):
 
             assert self.actor_critic.training
 
+        # xPPO
+        # =====================================================================
+        second_penalty_loops = []
+        # =====================================================================
         for epoch in range(self.cfg.num_epochs):
             with timing.add_time("epoch_init"):
                 if early_stop:
@@ -707,113 +920,42 @@ class Learner(Configurable):
                 force_summaries = False
                 minibatches = self._get_minibatches(batch_size, experience_size)
 
+            kl_old = None
+            if self._reset_policy_optimizer:
+                self.optimizer.load_state_dict(
+                    self._initial_policy_opt_state_dict
+                )
             for batch_num in range(len(minibatches)):
-                with torch.no_grad(), timing.add_time("minibatch_init"):
-                    indices = minibatches[batch_num]
+                force_summaries, kl_old, num_sgd_steps, summaries_batch, kl_loss_coeff_opt, recent_kls, with_summaries = \
+                    self._minibatch_step(
+                        minibatches=minibatches, batch_num=batch_num, gpu_buffer=gpu_buffer, num_invalids=num_invalids,
+                        epoch_actor_losses=epoch_actor_losses, kl_loss_coeff_opt=kl_loss_coeff_opt,
+                        num_sgd_steps=num_sgd_steps, recent_kls=recent_kls, use_pg_loss=True,
+                        force_summaries=force_summaries, summaries_batch=summaries_batch,
+                        summaries_epoch=summaries_epoch, with_summaries=with_summaries, timing=timing,
+                        experience_size=experience_size, epoch=epoch)
 
-                    # current minibatch consisting of short trajectory segments with length == recurrence
-                    mb = self._get_minibatch(gpu_buffer, indices)
-
-                    # enable syntactic sugar that allows us to access dict's keys as object attributes
-                    mb = AttrDict(mb)
-
-                with timing.add_time("calculate_losses"):
-                    (
-                        action_distribution,
-                        policy_loss,
-                        exploration_loss,
-                        kl_old,
-                        kl_loss,
-                        value_loss,
-                        loss_summaries,
-                    ) = self._calculate_losses(mb, num_invalids)
-
-                with timing.add_time("losses_postprocess"):
-                    # noinspection PyTypeChecker
-                    actor_loss: Tensor = policy_loss + exploration_loss + kl_loss
-                    critic_loss = value_loss
-                    loss: Tensor = actor_loss + critic_loss
-
-                    epoch_actor_losses[batch_num] = float(actor_loss)
-
-                    high_loss = 30.0
-                    if torch.abs(loss) > high_loss:
-                        log.warning(
-                            "High loss value: l:%.4f pl:%.4f vl:%.4f exp_l:%.4f kl_l:%.4f (recommended to adjust the --reward_scale parameter)",
-                            to_scalar(loss),
-                            to_scalar(policy_loss),
-                            to_scalar(value_loss),
-                            to_scalar(exploration_loss),
-                            to_scalar(kl_loss),
-                        )
-
-                        # perhaps something weird is happening, we definitely want summaries from this step
-                        force_summaries = True
-
-                with torch.no_grad(), timing.add_time("kl_divergence"):
-                    # if kl_old is not None it is already calculated above
-                    if kl_old is None:
-                        # calculate KL-divergence with the behaviour policy action distribution
-                        old_action_distribution = get_action_distribution(
-                            self.actor_critic.action_space,
-                            mb.action_logits,
-                        )
-                        kl_old = action_distribution.kl_divergence(old_action_distribution)
-                        kl_old = masked_select(kl_old, mb.valids, num_invalids)
-
-                    kl_old_mean = float(kl_old.mean().item())
-                    recent_kls.append(kl_old_mean)
-                    if kl_old.numel() > 0 and kl_old.max().item() > 100:
-                        log.warning(f"KL-divergence is very high: {kl_old.max().item():.4f}")
-
-                # update the weights
-                with timing.add_time("update"):
-                    # following advice from https://youtu.be/9mS1fIYj1So set grad to None instead of optimizer.zero_grad()
-                    for p in self.actor_critic.parameters():
-                        p.grad = None
-
-                    loss.backward()
-
-                    if self.cfg.max_grad_norm > 0.0:
-                        with timing.add_time("clip"):
-                            torch.nn.utils.clip_grad_norm_(self.actor_critic.parameters(), self.cfg.max_grad_norm)
-
-                    curr_policy_version = self.train_step  # policy version before the weight update
-
-                    actual_lr = self.curr_lr
-                    if num_invalids > 0:
-                        # if we have masked (invalid) data we should reduce the learning rate accordingly
-                        # this prevents a situation where most of the data in the minibatch is invalid
-                        # and we end up doing SGD with super noisy gradients
-                        actual_lr = self.curr_lr * (experience_size - num_invalids) / experience_size
-                    self._apply_lr(actual_lr)
-
-                    with self.param_server.policy_lock:
-                        self.optimizer.step()
-
-                    num_sgd_steps += 1
-
-                with torch.no_grad(), timing.add_time("after_optimizer"):
-                    self._after_optimizer_step()
-
-                    if self.lr_scheduler.invoke_after_each_minibatch():
-                        self.curr_lr = self.lr_scheduler.update(self.curr_lr, recent_kls)
-
-                    # collect and report summaries
-                    should_record_summaries = with_summaries
-                    should_record_summaries &= epoch == summaries_epoch and batch_num == summaries_batch
-                    should_record_summaries |= force_summaries
-                    if should_record_summaries:
-                        # hacky way to collect all of the intermediate variables for summaries
-                        summary_vars = {**locals(), **loss_summaries}
-                        stats_and_summaries = self._record_summaries(AttrDict(summary_vars))
-                        del summary_vars
-                        force_summaries = False
-
-                    # make sure everything (such as policy weights) is committed to shared device memory
-                    synchronize(self.cfg, self.device)
-                    # this will force policy update on the inference worker (policy worker)
-                    self.policy_versions_tensor[self.policy_id] = self.train_step
+            # xPPO
+            # =====================================================================
+            penalty_loops = 0
+            while self._second_penalty_loop:
+                if self._kl_target_stat == "mean":
+                    if kl_old.mean() <= self.target_kl:
+                        break
+                elif self._kl_target_stat == "max":
+                    if kl_old.max() <= self.target_kl:
+                        break
+                force_summaries, kl_old, num_sgd_steps, summaries_batch, kl_loss_coeff_opt, recent_kls, \
+                    with_summaries = self._minibatch_step(
+                        minibatches=minibatches, batch_num=-1, gpu_buffer=gpu_buffer, num_invalids=num_invalids,
+                        epoch_actor_losses=epoch_actor_losses, kl_loss_coeff_opt=kl_loss_coeff_opt,
+                        num_sgd_steps=num_sgd_steps, recent_kls=recent_kls, use_pg_loss=False,
+                        force_summaries=force_summaries, summaries_batch=summaries_batch,
+                        summaries_epoch=summaries_epoch, with_summaries=with_summaries, timing=timing,
+                        experience_size=experience_size, epoch=epoch)
+                penalty_loops += 1
+            second_penalty_loops.append(penalty_loops)
+            # =====================================================================
 
             # end of an epoch
             if self.lr_scheduler.invoke_after_each_epoch():
@@ -889,9 +1031,9 @@ class Learner(Configurable):
             stats.value_delta = value_delta_avg
             stats.value_delta_max = value_delta_max
             # noinspection PyUnresolvedReferences
-            stats.fraction_clipped = (
-                (valid_ratios < var.clip_ratio_low).float() + (valid_ratios > var.clip_ratio_high).float()
-            ).mean()
+            # stats.fraction_clipped = (
+            #     (valid_ratios < var.clip_ratio_low).float() + (valid_ratios > var.clip_ratio_high).float()
+            # ).mean()
             stats.ratio_mean = ratio_mean
             stats.ratio_min = ratio_min
             stats.ratio_max = ratio_max
