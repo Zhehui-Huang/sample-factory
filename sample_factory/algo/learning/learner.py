@@ -32,9 +32,6 @@ from sample_factory.utils.timing import Timing
 from sample_factory.utils.typing import ActionDistribution, Config, InitModelData, PolicyID
 from sample_factory.utils.utils import ensure_dir_exists, experiment_dir, log
 
-MIN_KL_LOSS_COEFF = 1e-2
-
-
 class LearningRateScheduler:
     def update(self, current_lr, recent_kls):
         return current_lr
@@ -181,15 +178,16 @@ class Learner(Configurable):
         # xPPO
         # =====================================================================
         self._kl_loss_coeff_param = torch.nn.Parameter(torch.tensor(1.0))
-        self._kl_loss_coeff_lr = 0.1
         self._kl_loss_coeff_momentum = 0.999
         self._use_minibatch_kl_penalty = True
         self._optimize_log_loss_coeff = False
-        self.target_kl = 0.2
         self._initial_policy_opt_state_dict = None
         self._reset_policy_optimizer = True
         self._kl_target_stat = "max"
         self._second_penalty_loop = True
+        self._kl_loss_coeff_lr = cfg.kl_loss_coeff_lr
+        self.target_kl = cfg.target_kl
+        self.MIN_KL_LOSS_COEFF = cfg.MIN_KL_LOSS_COEFF
         # =====================================================================
 
     def init(self) -> InitModelData:
@@ -204,15 +202,15 @@ class Learner(Configurable):
 
         # xPPO
         # =====================================================================
-        if self.cfg.kl_loss_coeff == 0.0:
-            if is_continuous_action_space(self.env_info.action_space):
-                log.warning(
-                    "WARNING! It is generally recommended to enable Fixed KL loss (https://arxiv.org/pdf/1707.06347.pdf) for continuous action tasks to avoid potential numerical issues. "
-                    "I.e. set --kl_loss_coeff=0.1"
-                )
-            self.kl_loss_func = lambda action_space, action_logits, distribution, valids, num_invalids: (None, 0.0)
-        else:
-            self.kl_loss_func = self._kl_loss
+        # if self.cfg.kl_loss_coeff == 0.0:
+        #     if is_continuous_action_space(self.env_info.action_space):
+        #         log.warning(
+        #             "WARNING! It is generally recommended to enable Fixed KL loss (https://arxiv.org/pdf/1707.06347.pdf) for continuous action tasks to avoid potential numerical issues. "
+        #             "I.e. set --kl_loss_coeff=0.1"
+        #         )
+        #     self.kl_loss_func = lambda action_space, action_logits, distribution, valids, num_invalids: (None, 0.0)
+        # else:
+        self.kl_loss_func = self._kl_loss
         # =====================================================================
 
         # initialize the Torch modules
@@ -822,15 +820,15 @@ class Learner(Configurable):
             kl_loss_coeff_opt.step()
 
             if self._optimize_log_loss_coeff:
-                if self._kl_loss_coeff_param < 1 + MIN_KL_LOSS_COEFF:
+                if self._kl_loss_coeff_param < 1 + self.MIN_KL_LOSS_COEFF:
                     with torch.no_grad():
-                        self._kl_loss_coeff_param.copy_(1 + MIN_KL_LOSS_COEFF)
-                    assert self._kl_loss_coeff_param >= 1 + MIN_KL_LOSS_COEFF
+                        self._kl_loss_coeff_param.copy_(1 + self.MIN_KL_LOSS_COEFF)
+                    assert self._kl_loss_coeff_param >= 1 + self.MIN_KL_LOSS_COEFF
             else:
-                if self._kl_loss_coeff_param < MIN_KL_LOSS_COEFF:
+                if self._kl_loss_coeff_param < self.MIN_KL_LOSS_COEFF:
                     with torch.no_grad():
-                        self._kl_loss_coeff_param.copy_(MIN_KL_LOSS_COEFF)
-                    assert self._kl_loss_coeff_param >= MIN_KL_LOSS_COEFF
+                        self._kl_loss_coeff_param.copy_(self.MIN_KL_LOSS_COEFF)
+                    assert self._kl_loss_coeff_param >= self.MIN_KL_LOSS_COEFF
             # kl_loss_coeffs.append(self._kl_loss_coeff_param.item())
 
             # =====================================================================

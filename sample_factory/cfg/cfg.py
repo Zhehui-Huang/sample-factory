@@ -217,6 +217,22 @@ def add_rl_args(p: ArgumentParser):
         "Highly recommended for environments with continuous action spaces.",
     )
     p.add_argument(
+        "--kl_loss_coeff_lr",
+        default=0.1,
+        type=float,
+    )
+    p.add_argument(
+        "--target_kl",
+        default=0.03,
+        type=float,
+    )
+    p.add_argument(
+        "--MIN_KL_LOSS_COEFF",
+        default=0.01,
+        type=float,
+    )
+
+    p.add_argument(
         "--exploration_loss",
         default="entropy",
         type=str,
