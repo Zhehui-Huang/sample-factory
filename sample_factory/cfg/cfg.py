@@ -223,12 +223,12 @@ def add_rl_args(p: ArgumentParser):
     )
     p.add_argument(
         "--target_kl",
-        default=0.03,
+        default=0.1,
         type=float,
     )
     p.add_argument(
         "--MIN_KL_LOSS_COEFF",
-        default=0.01,
+        default=0.001,
         type=float,
     )
 
