@@ -834,29 +834,32 @@ class Learner(Configurable):
             # =====================================================================
             num_sgd_steps += 1
 
-        with torch.no_grad(), timing.add_time("after_optimizer"):
-            self._after_optimizer_step()
+        if use_pg_loss:
+            with torch.no_grad(), timing.add_time("after_optimizer"):
+                self._after_optimizer_step()
 
-            if self.lr_scheduler.invoke_after_each_minibatch():
-                self.curr_lr = self.lr_scheduler.update(self.curr_lr, recent_kls)
+                if self.lr_scheduler.invoke_after_each_minibatch():
+                    self.curr_lr = self.lr_scheduler.update(self.curr_lr, recent_kls)
 
-            # collect and report summaries
-            should_record_summaries = with_summaries
-            should_record_summaries &= epoch == summaries_epoch and batch_num == summaries_batch
-            should_record_summaries |= force_summaries
-            if should_record_summaries:
-                # hacky way to collect all of the intermediate variables for summaries
-                summary_vars = {**locals(), **loss_summaries}
-                stats_and_summaries = self._record_summaries(AttrDict(summary_vars))
-                del summary_vars
-                force_summaries = False
-            else:
-                stats_and_summaries = None
+                # collect and report summaries
+                should_record_summaries = with_summaries
+                should_record_summaries &= epoch == summaries_epoch and batch_num == summaries_batch
+                should_record_summaries |= force_summaries
+                if should_record_summaries:
+                    # hacky way to collect all of the intermediate variables for summaries
+                    summary_vars = {**locals(), **loss_summaries}
+                    stats_and_summaries = self._record_summaries(AttrDict(summary_vars))
+                    del summary_vars
+                    force_summaries = False
+                else:
+                    stats_and_summaries = None
 
-            # make sure everything (such as policy weights) is committed to shared device memory
-            synchronize(self.cfg, self.device)
-            # this will force policy update on the inference worker (policy worker)
-            self.policy_versions_tensor[self.policy_id] = self.train_step
+                # make sure everything (such as policy weights) is committed to shared device memory
+                synchronize(self.cfg, self.device)
+                # this will force policy update on the inference worker (policy worker)
+                self.policy_versions_tensor[self.policy_id] = self.train_step
+        else:
+            stats_and_summaries = None
 
         return force_summaries, kl_old, num_sgd_steps, summaries_batch, kl_loss_coeff_opt, recent_kls, with_summaries, \
             stats_and_summaries
