@@ -850,13 +850,16 @@ class Learner(Configurable):
                 stats_and_summaries = self._record_summaries(AttrDict(summary_vars))
                 del summary_vars
                 force_summaries = False
+            else:
+                stats_and_summaries = None
 
             # make sure everything (such as policy weights) is committed to shared device memory
             synchronize(self.cfg, self.device)
             # this will force policy update on the inference worker (policy worker)
             self.policy_versions_tensor[self.policy_id] = self.train_step
 
-        return force_summaries, kl_old, num_sgd_steps, summaries_batch, kl_loss_coeff_opt, recent_kls, with_summaries
+        return force_summaries, kl_old, num_sgd_steps, summaries_batch, kl_loss_coeff_opt, recent_kls, with_summaries, \
+            stats_and_summaries
 
     def _train(
         self, gpu_buffer: TensorDict, batch_size: int, experience_size: int, num_invalids: int
@@ -924,7 +927,8 @@ class Learner(Configurable):
                     self._initial_policy_opt_state_dict
                 )
             for batch_num in range(len(minibatches)):
-                force_summaries, kl_old, num_sgd_steps, summaries_batch, kl_loss_coeff_opt, recent_kls, with_summaries = \
+                force_summaries, kl_old, num_sgd_steps, summaries_batch, kl_loss_coeff_opt, recent_kls, with_summaries,\
+                    stats_and_summaries = \
                     self._minibatch_step(
                         minibatches=minibatches, batch_num=batch_num, gpu_buffer=gpu_buffer, num_invalids=num_invalids,
                         epoch_actor_losses=epoch_actor_losses, kl_loss_coeff_opt=kl_loss_coeff_opt,
@@ -944,8 +948,8 @@ class Learner(Configurable):
                     if kl_old.max() <= self.target_kl:
                         break
                 force_summaries, kl_old, num_sgd_steps, summaries_batch, kl_loss_coeff_opt, recent_kls, \
-                    with_summaries = self._minibatch_step(
-                        minibatches=minibatches, batch_num=-1, gpu_buffer=gpu_buffer, num_invalids=num_invalids,
+                    with_summaries, stats_and_summaries = self._minibatch_step(
+                        minibatches=minibatches, batch_num=summaries_batch, gpu_buffer=gpu_buffer, num_invalids=num_invalids,
                         epoch_actor_losses=epoch_actor_losses, kl_loss_coeff_opt=kl_loss_coeff_opt,
                         num_sgd_steps=num_sgd_steps, recent_kls=recent_kls, use_pg_loss=False,
                         force_summaries=force_summaries, summaries_batch=summaries_batch,
