@@ -19,4 +19,4 @@ _experiment = Experiment(
     _params.generate_params(randomize=False),
 )
 
-RUN_DESCRIPTION = RunDescription('paper_quads_multi_mix_baseline_8a_attn_v116', experiments=[_experiment])
+RUN_DESCRIPTION = RunDescription('sf_ant', experiments=[_experiment])
