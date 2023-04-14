@@ -7,11 +7,11 @@ _params = ParamGrid([
 
 DMLAB30_CLI = DMLAB30_BASELINE_CLI + (
     ' --with_wandb=True --wandb_project=stabilized-rl '
-    '--wandb_group=dmlab_sf_origin --wandb_user=resl-mixppo'
+    '--wandb_group=dmlab_sf_origin_v2 --wandb_user=resl-mixppo'
 )
 
 _experiment = Experiment(
-    'dmlab_sf_origin',
+    'dmlab_sf_origin_v2',
     DMLAB30_CLI,
     _params.generate_params(randomize=False),
 )
