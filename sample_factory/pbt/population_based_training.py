@@ -57,12 +57,12 @@ def perturb_batch_size(x, cfg):
 
 
 HYPERPARAMS_TO_TUNE = {
-    "learning_rate",
-    "exploration_loss_coeff",
-    "value_loss_coeff",
-    "max_grad_norm",
-    "ppo_clip_ratio",
-    "ppo_clip_value",
+    #"learning_rate",
+    #"exploration_loss_coeff",
+    #"value_loss_coeff",
+    #"max_grad_norm",
+    #"ppo_clip_ratio",
+    #"ppo_clip_value",
     # batch size and gamma are added with a CLI parameter
 }
 
