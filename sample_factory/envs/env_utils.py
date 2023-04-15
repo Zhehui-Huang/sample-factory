@@ -80,8 +80,7 @@ class RewardShapingInterface:
         """
         Sets the new reward shaping scheme.
         :param reward_shaping dictionary of string-float key-value pairs
-        :param agent_idx: integer agent index (for multi-agent envs). Can be a slice if we're training in batched mode
-        (set a single reward shaping scheme for a range of agents)
+        :param agent_idx: integer agent index (for multi-agent envs)
         """
         raise NotImplementedError
 

@@ -1,4 +1,4 @@
-import gymnasium as gym
+import gym
 import numpy as np
 
 from sample_factory.algo.utils.rl_utils import make_dones

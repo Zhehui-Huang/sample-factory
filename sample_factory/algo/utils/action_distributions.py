@@ -1,6 +1,6 @@
 import math
 
-import gymnasium as gym
+import gym
 import numpy as np
 import torch
 from torch import Tensor

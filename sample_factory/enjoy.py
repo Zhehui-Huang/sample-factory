@@ -2,7 +2,7 @@ import time
 from collections import deque
 from typing import Dict, Tuple
 
-import gymnasium as gym
+import gym
 import numpy as np
 import torch
 from torch import Tensor
@@ -59,11 +59,9 @@ def render_frame(cfg, env, video_frames, num_episodes, last_render_start) -> flo
     render_start = time.time()
 
     if cfg.save_video:
-        need_video_frame = len(video_frames) < cfg.video_frames or cfg.video_frames < 0 and num_episodes == 0
-        if need_video_frame:
-            frame = env.render()
-            if frame is not None:
-                video_frames.append(frame.copy())
+        frame = env.render()
+        if (len(video_frames) < cfg.video_frames) or (cfg.video_frames < 0 and num_episodes == 0):
+            video_frames.append(frame)
     else:
         if not cfg.no_render:
             target_delay = 1.0 / cfg.fps if cfg.fps > 0 else 0
@@ -71,7 +69,7 @@ def render_frame(cfg, env, video_frames, num_episodes, last_render_start) -> flo
             time_wait = target_delay - current_delay
 
             if time_wait > 0:
-                # log.info("Wait time %.3f", time_wait)
+                log.info("Wait time %.3f", time_wait)
                 time.sleep(time_wait)
 
             try:
@@ -178,8 +176,6 @@ def enjoy(cfg: Config) -> Tuple[StatusCode, float]:
                     episode_reward += rew.float()
 
                 num_frames += 1
-                if num_frames % 100 == 0:
-                    log.debug(f"Num frames {num_frames}...")
 
                 dones = dones.cpu().numpy()
                 for agent_i, done_flag in enumerate(dones):
@@ -187,6 +183,11 @@ def enjoy(cfg: Config) -> Tuple[StatusCode, float]:
                         finished_episode[agent_i] = True
                         rew = episode_reward[agent_i].item()
                         episode_rewards[agent_i].append(rew)
+                        if cfg.use_record_episode_statistics:
+                            if "episode" in infos[agent_i].keys():
+                                reward_list.append(infos[agent_i]["episode"]["r"])
+                        else:
+                            reward_list.append(rew)
 
                         true_objective = rew
                         if isinstance(infos, (list, tuple)):
@@ -208,10 +209,8 @@ def enjoy(cfg: Config) -> Tuple[StatusCode, float]:
                             # we want the scores from the full episode not a single agent death (due to EpisodicLifeEnv wrapper)
                             if "episode" in infos[agent_i].keys():
                                 num_episodes += 1
-                                reward_list.append(infos[agent_i]["episode"]["r"])
                         else:
                             num_episodes += 1
-                            reward_list.append(true_objective)
 
                 # if episode terminated synchronously for all agents, pause a bit before starting a new one
                 if all(dones):
@@ -259,20 +258,10 @@ def enjoy(cfg: Config) -> Tuple[StatusCode, float]:
             fps = cfg.fps
         else:
             fps = 30
-        generate_replay_video(experiment_dir(cfg=cfg), video_frames, fps, cfg)
+        generate_replay_video(experiment_dir(cfg=cfg), video_frames, fps)
 
     if cfg.push_to_hub:
-        generate_model_card(
-            experiment_dir(cfg=cfg),
-            cfg.algo,
-            cfg.env,
-            cfg.hf_repository,
-            reward_list,
-            cfg.enjoy_script,
-            cfg.train_script,
-        )
-        push_to_hf(experiment_dir(cfg=cfg), cfg.hf_repository)
+        generate_model_card(experiment_dir(cfg=cfg), cfg.algo, cfg.env, reward_list)
+        push_to_hf(experiment_dir(cfg=cfg), f"{cfg.hf_username}/{cfg.hf_repository}", cfg.num_policies)
 
-    return ExperimentStatus.SUCCESS, sum([sum(episode_rewards[i]) for i in range(env.num_agents)]) / sum(
-        [len(episode_rewards[i]) for i in range(env.num_agents)]
-    )
+    return ExperimentStatus.SUCCESS, float(np.mean(episode_rewards))

@@ -1,4 +1,4 @@
-from signal_slot.signal_slot import EventLoop, EventLoopObject, Timer, process_name, signal
+from signal_slot.signal_slot import EventLoop, EventLoopObject, Timer, signal
 
 from sample_factory.utils.utils import log
 
@@ -18,9 +18,7 @@ class HeartbeatStoppableEventLoopObject(EventLoopObject):
         ...
 
     def _report_heartbeat(self):
-        p_name = process_name(self.event_loop.process)
-        qsize = self.event_loop.signal_queue.qsize()
-        self.heartbeat.emit(type(self), self.object_id, p_name, qsize)
+        self.heartbeat.emit(type(self), self.object_id)
 
     def on_stop(self, *_) -> None:
         """

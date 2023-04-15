@@ -44,10 +44,10 @@ class LearningRateScheduler:
 
 
 class KlAdaptiveScheduler(LearningRateScheduler, ABC):
-    def __init__(self, cfg: Config):
+    def __init__(self, cfg):
         self.lr_schedule_kl_threshold = cfg.lr_schedule_kl_threshold
-        self.min_lr = cfg.lr_adaptive_min
-        self.max_lr = cfg.lr_adaptive_max
+        self.min_lr = 1e-6
+        self.max_lr = 1e-2
 
     @abstractmethod
     def num_recent_kls_to_use(self) -> int:
@@ -161,8 +161,10 @@ class Learner(Configurable):
         # decay rate at which summaries are collected
         # save summaries every 5 seconds in the beginning, but decay to every 4 minutes in the limit, because we
         # do not need frequent summaries for longer experiments
-        self.summary_rate_decay_seconds = LinearDecay([(0, 2), (100000, 60), (1000000, 120)])
+        self.summary_rate_decay_seconds = LinearDecay([(0, 5), (100000, 120), (1000000, 240)])
         self.last_summary_time = 0
+
+        # TODO: fix milestone mechanism
         self.last_milestone_time = 0
 
         # shared tensor used to share the latest policy version between processes
@@ -232,15 +234,12 @@ class Learner(Configurable):
         optimizer_cls = optimizer_cls[self.cfg.optimizer]
         log.debug(f"Using optimizer {optimizer_cls}")
 
-        optimizer_kwargs = dict(
+        self.optimizer = optimizer_cls(
+            params,
             lr=self.cfg.learning_rate,  # use default lr only in ctor, then we use the one loaded from the checkpoint
             betas=(self.cfg.adam_beta1, self.cfg.adam_beta2),
+            eps=self.cfg.adam_eps,
         )
-
-        if self.cfg.optimizer in ["adam", "lamb"]:
-            optimizer_kwargs["eps"] = self.cfg.adam_eps
-
-        self.optimizer = optimizer_cls(params, **optimizer_kwargs)
 
         self.load_from_checkpoint(self.policy_id)
         self.param_server.init(self.actor_critic, self.train_step, self.device)
@@ -336,7 +335,7 @@ class Learner(Configurable):
         assert checkpoint is not None
 
         checkpoint_dir = self.checkpoint_dir(self.cfg, self.policy_id)
-        tmp_filepath = join(checkpoint_dir, f"{name_prefix}_temp")
+        tmp_filepath = join(checkpoint_dir, f".{name_prefix}_temp")
         checkpoint_name = f"{name_prefix}_{self.train_step:09d}_{self.env_steps}{name_suffix}.pth"
         filepath = join(checkpoint_dir, checkpoint_name)
         if verbose:
@@ -371,6 +370,8 @@ class Learner(Configurable):
         torch.save(checkpoint, milestone_path)
 
     def save_best(self, policy_id, metric, metric_value) -> bool:
+        # TODO it seems that the Runner is broadcasting the signals to all learners, so it won't pass the assertion in multi-policy env, we may add an if instead of assert?
+        # assert policy_id == self.policy_id
         if policy_id != self.policy_id:
             return False
         p = 3  # precision, number of significant digits
@@ -515,10 +516,7 @@ class Learner(Configurable):
             num_minibatches = experience_size // batch_size
             minibatches = np.split(indices, num_minibatches)
         else:
-            minibatches = list(slice(i * batch_size, (i + 1) * batch_size) for i in range(0, minibatches_per_epoch))
-
-            # this makes sense but I'd like to do some testing before enabling it
-            # random.shuffle(minibatches)  # same minibatches between epochs, but in random order
+            minibatches = tuple(slice(i * batch_size, (i + 1) * batch_size) for i in range(0, minibatches_per_epoch))
 
         return minibatches
 
@@ -548,7 +546,6 @@ class Learner(Configurable):
         # calculate policy head outside of recurrent loop
         with self.timing.add_time("forward_head"):
             head_outputs = self.actor_critic.forward_head(mb.normalized_obs)
-            minibatch_size: int = head_outputs.size(0)
 
         # initial rnn states
         with self.timing.add_time("bptt_initial"):
@@ -571,16 +568,14 @@ class Learner(Configurable):
                 with self.timing.add_time("bptt_forward_core"):
                     core_output_seq, _ = self.actor_critic.forward_core(head_output_seq, rnn_states)
                 core_outputs = build_core_out_from_seq(core_output_seq, inverted_select_inds)
-                del core_output_seq
             else:
                 core_outputs, _ = self.actor_critic.forward_core(head_outputs, rnn_states)
 
-            del head_outputs
-
-        num_trajectories = minibatch_size // recurrence
-        assert core_outputs.shape[0] == minibatch_size
+        num_trajectories = head_outputs.size(0) // recurrence
 
         with self.timing.add_time("tail"):
+            assert core_outputs.shape[0] == head_outputs.shape[0]
+
             # calculate policy tail outside of recurrent loop
             result = self.actor_critic.forward_tail(core_outputs, values_only=False, sample_actions=False)
             action_distribution = self.actor_critic.action_distribution()
@@ -591,8 +586,6 @@ class Learner(Configurable):
             ratio = torch.clamp(ratio, 0.05, 20.0)
 
             values = result["values"].squeeze()
-
-            del core_outputs
 
         # these computations are not the part of the computation graph
         with torch.no_grad(), self.timing.add_time("advantages_returns"):
@@ -653,17 +646,7 @@ class Learner(Configurable):
             old_values = mb["values"]
             value_loss = self._value_loss(values, old_values, targets, clip_value, valids, num_invalids)
 
-        loss_summaries = dict(
-            ratio=ratio,
-            clip_ratio_low=clip_ratio_low,
-            clip_ratio_high=clip_ratio_high,
-            values=result["values"],
-            adv=adv,
-            adv_std=adv_std,
-            adv_mean=adv_mean,
-        )
-
-        return action_distribution, policy_loss, exploration_loss, kl_old, kl_loss, value_loss, loss_summaries
+        return action_distribution, policy_loss, exploration_loss, kl_old, kl_loss, value_loss, locals()
 
     def _train(
         self, gpu_buffer: TensorDict, batch_size: int, experience_size: int, num_invalids: int
@@ -673,7 +656,7 @@ class Learner(Configurable):
             early_stopping_tolerance = 1e-6
             early_stop = False
             prev_epoch_actor_loss = 1e9
-            epoch_actor_losses = [0] * self.cfg.num_batches_per_epoch
+            epoch_actor_losses = torch.empty([self.cfg.num_batches_per_epoch], device=self.device)
 
             # recent mean KL-divergences per minibatch, this used by LR schedulers
             recent_kls = []
@@ -727,16 +710,15 @@ class Learner(Configurable):
                         kl_old,
                         kl_loss,
                         value_loss,
-                        loss_summaries,
+                        loss_locals,
                     ) = self._calculate_losses(mb, num_invalids)
 
                 with timing.add_time("losses_postprocess"):
                     # noinspection PyTypeChecker
                     actor_loss: Tensor = policy_loss + exploration_loss + kl_loss
+                    epoch_actor_losses[batch_num] = actor_loss
                     critic_loss = value_loss
                     loss: Tensor = actor_loss + critic_loss
-
-                    epoch_actor_losses[batch_num] = float(actor_loss)
 
                     high_loss = 30.0
                     if torch.abs(loss) > high_loss:
@@ -763,9 +745,9 @@ class Learner(Configurable):
                         kl_old = action_distribution.kl_divergence(old_action_distribution)
                         kl_old = masked_select(kl_old, mb.valids, num_invalids)
 
-                    kl_old_mean = float(kl_old.mean().item())
+                    kl_old_mean = kl_old.mean().item()
                     recent_kls.append(kl_old_mean)
-                    if kl_old.numel() > 0 and kl_old.max().item() > 100:
+                    if kl_old.max().item() > 100:
                         log.warning(f"KL-divergence is very high: {kl_old.max().item():.4f}")
 
                 # update the weights
@@ -807,9 +789,8 @@ class Learner(Configurable):
                     should_record_summaries |= force_summaries
                     if should_record_summaries:
                         # hacky way to collect all of the intermediate variables for summaries
-                        summary_vars = {**locals(), **loss_summaries}
+                        summary_vars = {**loss_locals, **locals()}
                         stats_and_summaries = self._record_summaries(AttrDict(summary_vars))
-                        del summary_vars
                         force_summaries = False
 
                     # make sure everything (such as policy weights) is committed to shared device memory
@@ -821,7 +802,7 @@ class Learner(Configurable):
             if self.lr_scheduler.invoke_after_each_epoch():
                 self.curr_lr = self.lr_scheduler.update(self.curr_lr, recent_kls)
 
-            new_epoch_actor_loss = float(np.mean(epoch_actor_losses))
+            new_epoch_actor_loss = epoch_actor_losses.mean().item()
             loss_delta_abs = abs(prev_epoch_actor_loss - new_epoch_actor_loss)
             if loss_delta_abs < early_stopping_tolerance:
                 early_stop = True
@@ -856,20 +837,16 @@ class Learner(Configurable):
         )
         stats.grad_norm = grad_norm
         stats.loss = var.loss
-        stats.value = var.values.mean()
+        stats.value = var.result["values"].mean()
         stats.entropy = var.action_distribution.entropy().mean()
         stats.policy_loss = var.policy_loss
         stats.kl_loss = var.kl_loss
         stats.value_loss = var.value_loss
         stats.exploration_loss = var.exploration_loss
 
-        stats.act_min = var.mb.actions.min()
-        stats.act_max = var.mb.actions.max()
-
-        stats.adv_min = var.mb.advantages.min()
-        stats.adv_max = var.mb.advantages.max()
+        stats.adv_min = var.adv.min()
+        stats.adv_max = var.adv.max()
         stats.adv_std = var.adv_std
-        stats.adv_mean = var.adv_mean
         stats.max_abs_logprob = torch.abs(var.mb.action_logits).max()
 
         if hasattr(var.action_distribution, "summaries"):
@@ -883,7 +860,7 @@ class Learner(Configurable):
             ratio_max = valid_ratios.max().detach()
             # log.debug('Learner %d ratio mean min max %.4f %.4f %.4f', self.policy_id, ratio_mean.cpu().item(), ratio_min.cpu().item(), ratio_max.cpu().item())
 
-            value_delta = torch.abs(var.values - var.mb.values)
+            value_delta = torch.abs(var.values - var.old_values)
             value_delta_avg, value_delta_max = value_delta.mean(), value_delta.max()
 
             stats.kl_divergence = var.kl_old_mean
@@ -902,8 +879,7 @@ class Learner(Configurable):
         # this caused numerical issues on some versions of PyTorch with second moment reaching infinity
         adam_max_second_moment = 0.0
         for key, tensor_state in self.optimizer.state.items():
-            if "exp_avg_sq" in tensor_state:
-                adam_max_second_moment = max(tensor_state["exp_avg_sq"].max().item(), adam_max_second_moment)
+            adam_max_second_moment = max(tensor_state["exp_avg_sq"].max().item(), adam_max_second_moment)
         stats.adam_max_second_moment = adam_max_second_moment
 
         version_diff = (var.curr_policy_version - var.mb.policy_version)[var.mb.policy_id == self.policy_id]

@@ -1,7 +1,5 @@
 from typing import Optional
 
-from sample_factory.utils.utils import log
-
 try:
     import envpool
 except ImportError as e:
@@ -30,12 +28,7 @@ def atari_env_by_name(name):
 
 
 def make_atari_env(env_name, cfg, env_config, render_mode: Optional[str] = None):
-    if cfg.num_envs_per_worker >= 1:
-        log.warning(
-            "When using envpool, set num_envs_per_worker=1 and use --env_agents={desired number of envs}. "
-            f"Setting --num_envs_per_worker={cfg.num_envs_per_worker} will create multiple envpools per worker process "
-            f"which is not the desirable behavior in most configurations."
-        )
+    assert cfg.num_envs_per_worker == 1, "when using envpool, set num_envs_per_worker=1 and use --env_agents="
     atari_spec = atari_env_by_name(env_name)
 
     env_kwargs = dict()
@@ -55,9 +48,7 @@ def make_atari_env(env_name, cfg, env_config, render_mode: Optional[str] = None)
         frame_skip=cfg.env_frameskip,
         **env_kwargs,
     )
-
     env = EnvPoolResetFixWrapper(env)
     env = BatchedRecordEpisodeStatistics(env, num_envs=cfg.env_agents)
     env.num_agents = cfg.env_agents
-
     return env

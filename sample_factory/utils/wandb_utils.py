@@ -42,7 +42,7 @@ def init_wandb(cfg):
             group=wandb_group,
             job_type=cfg.wandb_job_type,
             tags=cfg.wandb_tags,
-            resume="allow",
+            resume=True,
             settings=wandb.Settings(start_method="fork"),
         )
 

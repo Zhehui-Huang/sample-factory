@@ -23,7 +23,7 @@ def parse_atari_args(argv=None, evaluation=False):
     return final_cfg
 
 
-def main():  # pragma: no cover
+def main():
     """Script entry point."""
     register_atari_components()
     cfg = parse_atari_args()
@@ -31,5 +31,5 @@ def main():  # pragma: no cover
     return status
 
 
-if __name__ == "__main__":  # pragma: no cover
+if __name__ == "__main__":
     sys.exit(main())

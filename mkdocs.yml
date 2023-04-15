@@ -1,4 +1,5 @@
-site_name: Sample Factory Documentation
+# [TODO] may change
+site_name: Sample-Factory Doc
 
 # Repository
 repo_name: alex-petrenko/sample-factory
@@ -7,7 +8,6 @@ repo_url: https://github.com/alex-petrenko/sample-factory
 # Configuration
 theme:
   name: material
-  nav_style: dark
   palette:
     # Palette toggle for light mode
     - media: "(prefers-color-scheme: light)"
@@ -51,7 +51,7 @@ theme:
     - search.highlight
 
 # Copyright
-copyright: Copyright &copy; 2022, Sample Factory. All rights reserved.
+copyright: Copyright &copy; 2022, Sample-Factory. All rights reserved.
 
 # Plugins
 plugins:
@@ -64,16 +64,13 @@ plugins:
 # Footer
 extra:
   social:
+  # [TODO] change to Aleksei
     - icon: fontawesome/solid/paper-plane
-      link: mailto:apetrenko1991@gmail.com
+      link: mailto:ming@huggingface.co
     - icon: fontawesome/brands/github
-      link: https://github.com/alex-petrenko
+      link: https://github.com/wmFrank
     - icon: fontawesome/brands/linkedin
-      link: https://www.linkedin.com/in/apetrenko-nn/
-    - icon: fontawesome/brands/twitter
-      link: https://twitter.com/petrenko_ai
-    - icon: fontawesome/solid/user
-      link: https://alex-petrenko.github.io/
+      link: https://www.linkedin.com/in/ming-wang-frank/
 
 # Extensions
 markdown_extensions:
@@ -120,60 +117,18 @@ markdown_extensions:
 nav:
   - Overview: index.md
   - Get Started:
-    - 01-get-started/installation.md
-    - 01-get-started/basic-usage.md
-  - Basic Guides:
-    - Configuration:
-      - 02-configuration/configuration.md
-      - 02-configuration/cfg-params.md
-    - Customization:
-      - 03-customization/custom-environments.md
-      - 03-customization/custom-multi-agent-environments.md
-      - 03-customization/custom-models.md
-    - Running Experiments:
-      - 04-experiments/experiment-launcher.md
-      - 04-experiments/slurm-details.md
-    - Monitoring Experiments:
-      - 05-monitoring/tensorboard.md
-      - 05-monitoring/wandb.md
-      - 05-monitoring/custom-metrics.md
-      - 05-monitoring/metrics-reference.md
-    - Troubleshooting:
-      - 05-troubleshooting/troubleshooting.md
-  - Architecture:
-    - 06-architecture/overview.md
-    - 06-architecture/message-passing.md
-  - Advanced Topics:
-    - 07-advanced-topics/sync-async.md
-    - 07-advanced-topics/double-buffered.md
-    - 07-advanced-topics/batched-non-batched.md
-    - 07-advanced-topics/serial-mode.md
-    - 07-advanced-topics/normalizations.md
-    - 07-advanced-topics/policy-lag.md
-    - 07-advanced-topics/multi-policy-training.md
-    - 07-advanced-topics/pbt.md
-    - 07-advanced-topics/inactive-agents.md
-    - 07-advanced-topics/passing-info.md
-    - 07-advanced-topics/observer.md
-    - 07-advanced-topics/profiling.md
-  - Miscellaneous:
-    - 08-miscellaneous/tests.md
-    - 08-miscellaneous/v1-to-v2.md
+    - get-started/installation.md
+    - get-started/basic-usage.md
+    - get-started/running-experiments.md
+    - get-started/running-slurm.md
+    - get-started/huggingface.md
   - Environment Integrations:
-    - 09-environment-integrations/mujoco.md
-    - 09-environment-integrations/atari.md
-    - 09-environment-integrations/vizdoom.md
-    - 09-environment-integrations/dmlab.md
-    - 09-environment-integrations/megaverse.md
-    - 09-environment-integrations/envpool.md
-    - 09-environment-integrations/isaacgym.md
-    - 09-environment-integrations/brax.md
-    - 09-environment-integrations/swarm-rl.md
-  - Huggingface Integration:
-    - 10-huggingface/huggingface.md
+    - environment-integrations/mujoco.md
+    - environment-integrations/atari.md
+    - environment-integrations/vizdoom.md
   - Release Notes:
-    - 11-release-notes/release-notes.md
+    - release-notes/release-notes.md
   - Community:
-    - 12-community/contribution.md
-    - 12-community/doc-contribution.md
-    - 12-community/citation.md
+    - community/contribution.md
+    - community/doc-contribution.md
+    - community/citation.md

@@ -25,24 +25,21 @@ def register_vizdoom_components():
     register_vizdoom_models()
 
 
-def parse_vizdoom_cfg(argv=None, evaluation=False):
-    parser, _ = parse_sf_args(argv=argv, evaluation=evaluation)
+def main():
+    """Script entry point."""
+    register_vizdoom_components()
+
+    parser, cfg = parse_sf_args()
     # parameters specific to Doom envs
     add_doom_env_args(parser)
     # override Doom default values for algo parameters
     doom_override_defaults(parser)
     # second parsing pass yields the final configuration
-    final_cfg = parse_full_cfg(parser, argv)
-    return final_cfg
+    cfg = parse_full_cfg(parser)
 
-
-def main():  # pragma: no cover
-    """Script entry point."""
-    register_vizdoom_components()
-    cfg = parse_vizdoom_cfg()
     status = run_rl(cfg)
     return status
 
 
-if __name__ == "__main__":  # pragma: no cover
+if __name__ == "__main__":
     sys.exit(main())

@@ -16,7 +16,7 @@ def add_basic_cli_args(p: ArgumentParser):
         default="default_experiment",
         help="Unique experiment name. This will also be the name for the experiment folder in the train dir."
         "If the experiment folder with this name aleady exists the experiment will be RESUMED!"
-        "Any parameters passed from command line that do not match the parameters stored in the experiment config.json file will be overridden.",
+        "Any parameters passed from command line that do not match the parameters stored in the experiment cfg.json file will be overridden.",
     )
     p.add_argument("--train_dir", default=join(os.getcwd(), "train_dir"), type=str, help="Root for all experiments")
     p.add_argument(
@@ -155,13 +155,13 @@ def add_rl_args(p: ArgumentParser):
         "rollout, although for PBT training it is currently recommended that rollout << episode_len"
         "(see function finalize_trajectory in actor_worker.py)",
     )
+    # TODO: force set recurrence to rollout len if we use rnns - we don't currently support unequal recurrence and rollout anyway
     p.add_argument(
         "--recurrence",
-        default=-1,
+        default=32,
         type=int,
-        help="Trajectory length for backpropagation through time. "
-        "Default value (-1) sets recurrence to rollout length for RNNs and to 1 (no recurrence) for feed-forward nets. "
-        "If you train with V-trace recurrence should be equal to rollout length.",
+        help="Trajectory length for backpropagation through time. If recurrence=1 there is no backpropagation through time, and experience is shuffled completely randomly"
+        "For V-trace recurrence should be equal to rollout length.",
     )
     p.add_argument(
         "--shuffle_minibatches",
@@ -196,7 +196,7 @@ def add_rl_args(p: ArgumentParser):
     )
     p.add_argument(
         "--normalize_returns",
-        default=True,
+        default=False,
         type=str2bool,
         help="Whether to use running mean and standard deviation to normalize discounted returns",
     )
@@ -308,17 +308,6 @@ def add_rl_args(p: ArgumentParser):
         ),
     )
     p.add_argument("--lr_schedule_kl_threshold", default=0.008, type=float, help="Used with kl_adaptive_* schedulers")
-    p.add_argument("--lr_adaptive_min", default=1e-6, type=float, help="Minimum learning rate")
-    p.add_argument(
-        "--lr_adaptive_max",
-        default=1e-2,
-        type=float,
-        help=(
-            "Maximum learning rate. This is the best value tuned for IsaacGymEnvs environments such as Ant/Humanoid, "
-            "but it can be too high for some other envs. Set this to 1e-3 if you see instabilities with adaptive LR, "
-            "especially if reported LR on Tensorboard reaches this max value before the instability happens."
-        ),
-    )
 
     # observation preprocessing
     p.add_argument(
@@ -335,7 +324,7 @@ def add_rl_args(p: ArgumentParser):
     )
     p.add_argument(
         "--normalize_input",
-        default=True,
+        default=False,
         type=str2bool,
         help="Whether to use running mean and standard deviation to normalize observations",
     )
@@ -433,13 +422,13 @@ def add_rl_args(p: ArgumentParser):
 
     p.add_argument(
         "--heartbeat_interval",
-        default=20,
+        default=10,
         type=int,
         help="How often in seconds components send a heartbeat signal to the runner to verify they are not stuck",
     )
     p.add_argument(
         "--heartbeat_reporting_interval",
-        default=180,
+        default=60,
         type=int,
         help="How often in seconds the runner checks for heartbeats",
     )
@@ -503,9 +492,7 @@ def add_model_args(p: ArgumentParser):
         default=[512, 512],
         type=int,
         nargs="*",
-        help="In case of MLP encoder, sizes of layers to use. This is ignored if observations are images. "
-        "To use this parameter from command line, omit the = sign and separate values with spaces, e.g. "
-        "--encoder_mlp_layers 256 128 64",
+        help="In case of MLP encoder, sizes of layers to use. This is ignored if observations are images.",
     )
 
     # policy with image observations - convolutional encoder options
@@ -605,14 +592,6 @@ def add_default_env_args(p: ArgumentParser):
         help="Set to true if environment expects actions on GPU (i.e. as a GPU-side PyTorch tensor)",
     )
     p.add_argument(
-        "--env_gpu_observations",
-        default=True,
-        type=str2bool,
-        help="Setting this to True together with non-empty --actor_worker_gpus will make observations GPU-side PyTorch tensors. "
-        "Otherwise data will be on CPU. For CPU-based envs just set --actor_worker_gpus to empty list then this parameter does not matter.",
-    )
-
-    p.add_argument(
         "--env_frameskip",
         default=1,
         type=int,
@@ -661,21 +640,17 @@ def add_eval_args(parser):
     parser.add_argument("--save_video", action="store_true", help="Save video instead of rendering during evaluation")
     parser.add_argument(
         "--video_frames",
-        default=1e9,
+        default=-1,
         type=int,
-        help="Number of frames to render for the video. Defaults to 1e9 which will be the same as having video_frames = max_num_frames. You can also set to -1 which only renders one episode",
+        help="Number of frames to render for the video. Defaults to -1 which renders an entire episode",
     )
     parser.add_argument("--video_name", default=None, type=str, help="Name of video to save")
-    parser.add_argument("--max_num_frames", default=1e9, type=int, help="Maximum number of frames for evaluation")
-    parser.add_argument("--max_num_episodes", default=1e9, type=int, help="Maximum number of episodes for evaluation")
+    parser.add_argument("--max_num_frames", default=1e9, type=int, help="Maximum number of frames to render")
+    parser.add_argument("--max_num_episodes", default=1e9, type=int, help="Maximum number of episodes to render")
 
     parser.add_argument("--push_to_hub", action="store_true", help="Push experiment folder to HuggingFace Hub")
-    parser.add_argument(
-        "--hf_repository",
-        default=None,
-        type=str,
-        help="The full repo_id to push to on the HuggingFace Hub. Must be of the form <username>/<repo_name>",
-    )
+    parser.add_argument("--hf_username", default=None, type=str, help="HuggingFace username")
+    parser.add_argument("--hf_repository", default=None, type=str, help="Name of HuggingFace repository")
 
     parser.add_argument(
         "--policy_index", default=0, type=int, help="Policy to evaluate in case of multi-policy training"
@@ -686,19 +661,6 @@ def add_eval_args(parser):
         default=False,
         type=str2bool,
         help="False to sample from action distributions at test time. True to just use the argmax.",
-    )
-
-    parser.add_argument(
-        "--train_script",
-        default=None,
-        type=str,
-        help="Module name used to run training script. Used to generate HF model card",
-    )
-    parser.add_argument(
-        "--enjoy_script",
-        default=None,
-        type=str,
-        help="Module name used to run training script. Used to generate HF model card",
     )
 
 

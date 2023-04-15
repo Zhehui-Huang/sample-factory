@@ -4,7 +4,7 @@ import random
 from queue import Empty
 from typing import Any, Dict, List, Optional, Tuple
 
-import gymnasium as gym
+import gym
 import numpy as np
 
 from sample_factory.algo.sampling.sampling_utils import VectorEnvRunner, record_episode_statistics_wrapper_stats
@@ -148,9 +148,7 @@ class ActorState:
             return self._process_action_space(actions, is_discrete=False)
         elif isinstance(self.env_info.action_space, gym.spaces.Tuple):
             out_actions = []
-            for split, space in zip(
-                np.split(actions, np.cumsum(self.env_info.action_splits)[:-1]), self.env_info.action_space
-            ):
+            for split, space in zip(np.split(actions, self.env_info.action_splits), self.env_info.action_space):
                 is_discrete = isinstance(space, gym.spaces.Discrete)
                 out_actions.append(self._process_action_space(split, is_discrete))
             return out_actions
@@ -297,8 +295,7 @@ class ActorState:
             episode_extra_stats=info.get("episode_extra_stats", dict()),
         )
 
-        if (true_objective := info.get("true_objective", self.last_episode_reward)) is not None:
-            stats["true_objective"] = true_objective
+        stats["true_objective"] = info.get("true_objective", self.last_episode_reward)
 
         episode_wrapper_stats = record_episode_statistics_wrapper_stats(info)
         if episode_wrapper_stats is not None:
@@ -431,7 +428,7 @@ class NonBatchedVectorEnvRunner(VectorEnvRunner):
 
             if self.cfg.decorrelate_envs_on_one_worker:
                 env_i_split = self.num_envs * self.split_idx + env_i
-                decorrelate_steps = self.cfg.rollout * env_i_split
+                decorrelate_steps = self.cfg.rollout * env_i_split + self.cfg.rollout * random.randint(0, 4)
 
                 log.info("Decorrelating experience for %d frames...", decorrelate_steps)
                 for decorrelate_step in range(decorrelate_steps):

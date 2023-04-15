@@ -12,18 +12,9 @@ with open("README.md", "r") as f:
     long_description = "\n".join(descr_no_gifs)
 
 
-_atari_deps = ["gymnasium[atari, accept-rom-license]"]
-_mujoco_deps = ["gymnasium[mujoco]"]
+_atari_deps = ["gym[atari, accept-rom-license]"]
+_mujoco_deps = ["gym[mujoco]"]
 _envpool_deps = ["envpool"]
-
-_docs_deps = [
-    "mkdocs-material",
-    "mkdocs-minify-plugin",
-    "mkdocs-redirects",
-    "mkdocs-git-revision-date-localized-plugin",
-    "mkdocs-git-committers-plugin-2",
-    "mkdocs-git-authors-plugin",
-]
 
 setup(
     # Information
@@ -31,7 +22,7 @@ setup(
     description="High throughput asynchronous reinforcement learning framework",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    version="2.1.0",
+    version="2.0.0",
     url="https://github.com/alex-petrenko/sample-factory",
     author="Aleksei Petrenko",
     license="MIT",
@@ -41,9 +32,9 @@ setup(
         "Videos": "https://sites.google.com/view/sample-factory",
     },
     install_requires=[
-        "numpy>=1.18.1,<2.0",
-        "torch>=1.9,<2.0,!=1.13.0",
-        "gymnasium>=0.27,<1.0",
+        "numpy>=1.18.1<2.0",
+        "torch>=1.9,<2.0",
+        "gym>=0.26.1,<1.0",
         "pyglet",  # gym dependency
         "tensorboard>=1.15.0",
         "tensorboardx>=2.0",
@@ -53,24 +44,21 @@ setup(
         "faster-fifo>=1.4.2,<2.0",
         "signal-slot-mp>=1.0.3,<2.0",
         "filelock",
-        "opencv-python!=3.4.18.65",
+        "opencv-python",
         "wandb>=0.12.9",
-        "huggingface-hub>=0.10.0,<1.0",
+        "huggingface-hub<1.0",
     ],
     extras_require={
         # some tests require Atari and Mujoco so let's make sure dev environment has that
-        "dev": ["black", "isort>=5.12", "pytest<8.0", "flake8", "pre-commit", "twine"]
-        + _docs_deps
-        + _atari_deps
-        + _mujoco_deps,
+        "dev": ["black", "isort", "pytest<8.0", "flake8", "pre-commit", "twine"] + _atari_deps + _mujoco_deps,
         "atari": _atari_deps,
         "envpool": _envpool_deps,
         "mujoco": _mujoco_deps,
-        "vizdoom": ["vizdoom<2.0", "gymnasium[classic_control]"],
+        "vizdoom": ["vizdoom<2.0", "gym[classic_control]"],
         # "dmlab": ["dm_env"],  <-- these are just auxiliary packages, the main package has to be built from sources
     },
     package_dir={"": "./"},
-    packages=setuptools.find_packages(where="./", include=["sample_factory*", "sf_examples*"]),
+    packages=setuptools.find_packages(where="./", include="sample_factory*"),
     include_package_data=True,
     python_requires=">=3.8",
 )

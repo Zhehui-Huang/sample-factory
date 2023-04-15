@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from os.path import join
 from typing import Dict, List, Optional
 
-import gymnasium as gym
+import gym
 
 from sample_factory.algo.utils.action_distributions import calc_num_actions
 from sample_factory.algo.utils.context import set_global_context, sf_global_context
@@ -16,8 +16,6 @@ from sample_factory.envs.env_utils import get_default_reward_shaping
 from sample_factory.utils.typing import Config
 from sample_factory.utils.utils import log, project_tmp_dir
 
-ENV_INFO_PROTOCOL_VERSION = 1
-
 
 @dataclass
 class EnvInfo:
@@ -25,17 +23,12 @@ class EnvInfo:
     action_space: gym.Space
     num_agents: int
     gpu_actions: bool  # whether actions provided by the agent should be on GPU or not
-    gpu_observations: bool  # whether environment provides data (obs, etc.) on GPU or not
     action_splits: List[int]  # in the case of tuple actions, the splits for the actions
     all_discrete: bool  # in the case of tuple actions, whether the actions are all discrete
     frameskip: int
     # potentially customizable reward shaping, a map of reward component names to their respective weights
     # this can be used by PBT to optimize the reward shaping towards a sparse final objective
     reward_shaping_scheme: Optional[Dict[str, float]] = None
-
-    # version of the protocol, used to detect changes in the EnvInfo class and invalidate the cache if needed
-    # bump this version if you make any changes to the EnvInfo class
-    env_info_protocol_version: Optional[int] = None
 
 
 def extract_env_info(env: BatchedVecEnv | NonBatchedVecEnv, cfg: Config) -> EnvInfo:
@@ -44,7 +37,6 @@ def extract_env_info(env: BatchedVecEnv | NonBatchedVecEnv, cfg: Config) -> EnvI
     num_agents = env.num_agents
 
     gpu_actions = cfg.env_gpu_actions
-    gpu_observations = cfg.env_gpu_observations
 
     frameskip = cfg.env_frameskip
 
@@ -61,12 +53,10 @@ def extract_env_info(env: BatchedVecEnv | NonBatchedVecEnv, cfg: Config) -> EnvI
         action_space=action_space,
         num_agents=num_agents,
         gpu_actions=gpu_actions,
-        gpu_observations=gpu_observations,
         action_splits=action_splits,
         all_discrete=all_discrete,
         frameskip=frameskip,
         reward_shaping_scheme=reward_shaping_scheme,
-        env_info_protocol_version=ENV_INFO_PROTOCOL_VERSION,
     )
     return env_info
 
@@ -114,8 +104,7 @@ def obtain_env_info_in_a_separate_process(cfg: Config) -> EnvInfo:
         log.debug(f"Loading env info from cache: {cache_filename}")
         with open(cache_filename, "rb") as fobj:
             env_info = pickle.load(fobj)
-            if env_info.env_info_protocol_version == ENV_INFO_PROTOCOL_VERSION:
-                return env_info
+            return env_info
 
     sf_context = sf_global_context()
 

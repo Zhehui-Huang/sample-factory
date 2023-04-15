@@ -8,10 +8,10 @@ from threading import Thread
 from typing import Dict, Optional, Tuple
 
 import cv2
-import gymnasium as gym
+import gym
 import numpy as np
 from filelock import FileLock, Timeout
-from gymnasium.utils import seeding
+from gym.utils import seeding
 from vizdoom.vizdoom import AutomapMode, DoomGame, Mode, ScreenResolution
 
 from sample_factory.algo.utils.spaces.discretized import Discretized
@@ -633,7 +633,7 @@ class VizdoomEnv(gym.Env):
 
                 for frame in range(skip_frames):
                     doom._actions_flattened = actions
-                    _, rew, _, _, _ = env.step(actions)
+                    _, rew, _, _ = env.step(actions)
 
                     new_total_rew = total_rew + rew
                     if new_total_rew != total_rew:

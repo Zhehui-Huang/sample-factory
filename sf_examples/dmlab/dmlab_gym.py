@@ -7,7 +7,7 @@ from typing import Dict, Optional
 
 import cv2
 import deepmind_lab
-import gymnasium as gym
+import gym
 import numpy as np
 
 from sample_factory.utils.typing import PolicyID
@@ -193,7 +193,7 @@ class DmlabGymEnv(gym.Env):
         else:
             self.last_reset_seed = self.random_state.randint(0, 2**31 - 1)
 
-        self.dmlab.reset(seed=self.last_reset_seed)
+        self.dmlab.reset()
         self.last_observation = self.format_obs_dict(self.dmlab.observations())
         return self.last_observation, {}
 

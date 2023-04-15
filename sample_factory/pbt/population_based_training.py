@@ -63,7 +63,7 @@ HYPERPARAMS_TO_TUNE = {
     "max_grad_norm",
     "ppo_clip_ratio",
     "ppo_clip_value",
-    # gamma can be added with a CLI parameter (--pbt_optimize_gamma=True)
+    # batch size and gamma are added with a CLI parameter
 }
 
 # if not specified then tune all rewards

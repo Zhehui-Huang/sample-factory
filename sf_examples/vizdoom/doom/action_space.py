@@ -1,6 +1,6 @@
-import gymnasium as gym
+import gym
 import numpy as np
-from gymnasium.spaces import Box, Discrete
+from gym.spaces import Box, Discrete
 
 from sample_factory.algo.utils.spaces.discretized import Discretized
 

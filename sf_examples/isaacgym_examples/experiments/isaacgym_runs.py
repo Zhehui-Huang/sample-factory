@@ -1,6 +1,4 @@
-from sample_factory.utils.algo_version import ALGO_VERSION
-
-version = ALGO_VERSION
+version = 78
 vstr = f"v{version:03d}"
 
 # wandb_project = 'rlgpu-2022'

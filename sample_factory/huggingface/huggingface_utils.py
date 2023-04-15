@@ -2,25 +2,17 @@ import os
 
 import cv2
 import numpy as np
-from huggingface_hub import HfApi, Repository, repocard, upload_folder
+from huggingface_hub import HfApi, Repository, repocard, upload_file, upload_folder
 
-from sample_factory.utils.typing import Config
 from sample_factory.utils.utils import log, project_tmp_dir
 
 MIN_FRAME_SIZE = 180
 
 
-def generate_replay_video(dir_path: str, frames: list, fps: int, cfg: Config):
-    video_fname = "replay.mp4" if cfg.video_name is None else cfg.video_name
-    if not video_fname.endswith(".mp4"):
-        video_fname += ".mp4"
-
-    tmp_name = os.path.join(project_tmp_dir(), video_fname)
-    video_name = os.path.join(dir_path, video_fname)
-    if frames[0].shape[0] == 3:
-        frame_size = (frames[0].shape[2], frames[0].shape[1])
-    else:
-        frame_size = (frames[0].shape[1], frames[0].shape[0])
+def generate_replay_video(dir_path: str, frames: list, fps: int):
+    tmp_name = os.path.join(project_tmp_dir(), "replay.mp4")
+    video_name = os.path.join(dir_path, "replay.mp4")
+    frame_size = (frames[0].shape[1], frames[0].shape[0])
     resize = False
 
     if min(frame_size) < MIN_FRAME_SIZE:
@@ -30,63 +22,19 @@ def generate_replay_video(dir_path: str, frames: list, fps: int, cfg: Config):
 
     video = cv2.VideoWriter(tmp_name, cv2.VideoWriter_fourcc(*"mp4v"), fps, frame_size)
     for frame in frames:
-        if frame.shape[0] == 3:
-            frame = frame.transpose(1, 2, 0)
         if resize:
             frame = cv2.resize(frame, frame_size, interpolation=cv2.INTER_AREA)
         video.write(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
     video.release()
     os.system(f"ffmpeg -y -i {tmp_name} -vcodec libx264 {video_name}")
-    log.debug(f"Replay video saved to {video_name}!")
 
 
-def generate_model_card(
-    dir_path: str,
-    algo: str,
-    env: str,
-    repo_id: str,
-    rewards: list = None,
-    enjoy_name: str = None,
-    train_name: str = None,
-):
+def generate_model_card(dir_path: str, algo: str, env: str, rewards: list = None):
     readme_path = os.path.join(dir_path, "README.md")
-    repo_name = repo_id.split("/")[1]
 
     readme = f"""
-A(n) **{algo}** model trained on the **{env}** environment.\n
-This model was trained using Sample-Factory 2.0: https://github.com/alex-petrenko/sample-factory.
-Documentation for how to use Sample-Factory can be found at https://www.samplefactory.dev/\n\n
-## Downloading the model\n
-After installing Sample-Factory, download the model with:
-```
-python -m sample_factory.huggingface.load_from_hub -r {repo_id}
-```\n
-    """
-
-    if enjoy_name is None:
-        enjoy_name = "<path.to.enjoy.module>"
-
-    readme += f"""
-## Using the model\n
-To run the model after download, use the `enjoy` script corresponding to this environment:
-```
-python -m {enjoy_name} --algo={algo} --env={env} --train_dir=./train_dir --experiment={repo_name}
-```
-\n
-You can also upload models to the Hugging Face Hub using the same script with the `--push_to_hub` flag.
-See https://www.samplefactory.dev/10-huggingface/huggingface/ for more details
-    """
-
-    if train_name is None:
-        train_name = "<path.to.train.module>"
-
-    readme += f"""
-## Training with this model\n
-To continue training with this model, use the `train` script corresponding to this environment:
-```
-python -m {train_name} --algo={algo} --env={env} --train_dir=./train_dir --experiment={repo_name} --restart_behavior=resume --train_for_env_steps=10000000000
-```\n
-Note, you may have to adjust `--train_for_env_steps` to a suitably high number as the experiment will resume at the number of steps it concluded at.
+A(n) **{algo}** model trained on the **{env}** environment.
+This model was trained using Sample Factory 2.0: https://github.com/alex-petrenko/sample-factory
     """
 
     with open(readme_path, "w", encoding="utf-8") as f:
@@ -120,19 +68,34 @@ Note, you may have to adjust `--train_for_env_steps` to a suitably high number a
     repocard.metadata_save(readme_path, metadata)
 
 
-def push_to_hf(dir_path: str, repo_name: str):
+def push_to_hf(dir_path: str, repo_name: str, num_policies: int = 1):
     repo_url = HfApi().create_repo(
         repo_id=repo_name,
         private=False,
         exist_ok=True,
     )
 
-    upload_folder(
-        repo_id=repo_name,
-        folder_path=dir_path,
-        path_in_repo=".",
-        ignore_patterns=[".git/*"],
-    )
+    # Upload folders
+    folders = [".summary"]
+    for policy_id in range(num_policies):
+        folders.append(f"checkpoint_p{policy_id}")
+    for f in folders:
+        if os.path.exists(os.path.join(dir_path, f)):
+            upload_folder(
+                repo_id=repo_name,
+                folder_path=os.path.join(dir_path, f),
+                path_in_repo=f,
+            )
+
+    # Upload files
+    files = ["cfg.json", "README.md", "replay.mp4"]
+    for f in files:
+        if os.path.exists(os.path.join(dir_path, f)):
+            upload_file(
+                repo_id=repo_name,
+                path_or_fileobj=os.path.join(dir_path, f),
+                path_in_repo=f,
+            )
 
     log.info(f"The model has been pushed to {repo_url}")
 

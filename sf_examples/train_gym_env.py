@@ -10,7 +10,7 @@ python -m sf_examples.enjoy_gym_env --algo=APPO --experiment=example_gym_cartpol
 import sys
 from typing import Optional
 
-import gymnasium as gym
+import gym
 
 from sample_factory.cfg.arguments import parse_full_cfg, parse_sf_args
 from sample_factory.envs.env_utils import register_env
@@ -25,9 +25,9 @@ def register_custom_components():
     register_env("CartPole-v1", make_gym_env_func)
 
 
-def parse_custom_args(argv=None, evaluation=False):
-    parser, cfg = parse_sf_args(argv=argv, evaluation=evaluation)
-    cfg = parse_full_cfg(parser, argv)
+def parse_custom_args(evaluation=False):
+    parser, cfg = parse_sf_args(evaluation=evaluation)
+    cfg = parse_full_cfg(parser)
     return cfg
 
 

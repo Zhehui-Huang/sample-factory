@@ -1,5 +1,7 @@
 # this is here just to guarantee that isaacgym is imported before PyTorch
 # isort: off
+from typing import List, Tuple, Dict, Optional
+
 # noinspection PyUnresolvedReferences
 import isaacgym
 
@@ -8,15 +10,13 @@ import isaacgym
 import os
 import sys
 from os.path import join
-from typing import Dict, List, Optional, Tuple
 
-import gymnasium as gym
+import gym
 import torch
 from isaacgymenvs.tasks import isaacgym_task_map
 from isaacgymenvs.utils.reformat import omegaconf_to_dict
 from torch import Tensor
 
-from sample_factory.algo.utils.gymnasium_utils import convert_space
 from sample_factory.cfg.arguments import parse_full_cfg, parse_sf_args
 from sample_factory.envs.env_utils import register_env
 from sample_factory.train import run_rl
@@ -29,14 +29,14 @@ class IsaacGymVecEnv(gym.Env):
         self.env = isaacgym_env
         # what about vectorized multi-agent envs? should we take num_agents into account also?
         self.num_agents = self.env.num_envs
-        self.action_space = convert_space(self.env.action_space)
+        self.action_space = self.env.action_space
 
         # isaacgym_examples environments actually return dicts
         if obs_key == "obs":
-            self.observation_space = gym.spaces.Dict(dict(obs=convert_space(self.env.observation_space)))
+            self.observation_space = gym.spaces.Dict(dict(obs=self.env.observation_space))
             self._proc_obs_func = lambda obs_dict: obs_dict
         elif obs_key == "states":
-            self.observation_space = gym.spaces.Dict(dict(obs=convert_space(self.env.state_space)))
+            self.observation_space = gym.spaces.Dict(dict(obs=self.env.state_space))
             self._proc_obs_func = self._use_states_as_obs
         else:
             raise ValueError(f"Unknown observation key: {obs_key}")
@@ -198,6 +198,7 @@ def override_default_params_func(env, parser):
         gamma=0.99,
         gae_lambda=0.95,
         with_vtrace=False,
+        recurrence=1,
         value_bootstrap=True,  # assuming reward from the last step in the episode can generally be ignored
         normalize_input=True,
         normalize_returns=True,  # does not improve results on all envs, but with return normalization we don't need to tune reward scale
@@ -222,66 +223,6 @@ env_configs = dict(
         # trains better without normalized returns, but we keep the default value for consistency
         # normalize_returns=False,
     ),
-    Anymal=dict(
-        train_for_env_steps=1310000000,
-        encoder_mlp_layers=[256, 128, 64],
-        gamma=0.99,
-        rollout=16,
-        learning_rate=3e-4,
-        lr_schedule_kl_threshold=0.008,
-        num_epochs=5,
-        max_grad_norm=1.0,
-        num_batches_per_epoch=4,
-        exploration_loss_coeff=0.0,
-    ),
-    AnymalTerrain=dict(
-        train_for_env_steps=1310000000,
-        encoder_mlp_layers=[256, 128, 64],
-        gamma=0.99,
-        rollout=16,
-        learning_rate=3e-4,
-        lr_schedule_kl_threshold=0.008,
-        num_epochs=5,
-        max_grad_norm=1.0,
-        num_batches_per_epoch=4,
-        exploration_loss_coeff=0.001,
-    ),
-    BallBalance=dict(
-        train_for_env_steps=1310000000,
-        encoder_mlp_layers=[128, 64, 32],
-        gamma=0.99,
-        rollout=16,
-        learning_rate=3e-4,
-        lr_schedule_kl_threshold=0.008,
-        num_epochs=5,
-        max_grad_norm=1.0,
-        num_batches_per_epoch=8,
-        exploration_loss_coeff=0.0,
-    ),
-    Cartpole=dict(
-        train_for_env_steps=1310000000,
-        encoder_mlp_layers=[128, 64, 32],
-        gamma=0.99,
-        rollout=16,
-        learning_rate=3e-4,
-        lr_schedule_kl_threshold=0.008,
-        num_epochs=5,
-        max_grad_norm=1.0,
-        num_batches_per_epoch=8,
-        exploration_loss_coeff=0.0,
-    ),
-    ShadowHand=dict(
-        train_for_env_steps=1310000000,
-        encoder_mlp_layers=[512, 512, 256, 128],
-        gamma=0.99,
-        rollout=16,
-        learning_rate=5e-4,
-        lr_schedule_kl_threshold=0.016,
-        num_epochs=5,
-        max_grad_norm=1.0,
-        num_batches_per_epoch=8,
-        exploration_loss_coeff=0.0,
-    ),
     Humanoid=dict(
         train_for_env_steps=1310000000,  # to match how much it is trained in rl-games
         encoder_mlp_layers=[400, 200, 100],
@@ -300,10 +241,12 @@ env_configs = dict(
         encoder_mlp_layers=[512, 256, 128],
         gamma=0.99,
         rollout=16,
+        recurrence=16,
+        use_rnn=False,
         learning_rate=5e-3,
         lr_schedule_kl_threshold=0.02,
         reward_scale=0.01,
-        num_epochs=4,
+        num_epochs=5,
         max_grad_norm=1.0,
         num_batches_per_epoch=8,
     ),
@@ -312,6 +255,7 @@ env_configs = dict(
         encoder_mlp_layers=[512, 256, 128],
         gamma=0.99,
         rollout=16,
+        recurrence=16,
         use_rnn=True,
         rnn_type="lstm",
         learning_rate=1e-4,
@@ -334,10 +278,12 @@ env_configs = dict(
         decoder_mlp_layers=[768, 512, 256],  # mlp layers AFTER the LSTM
         gamma=0.99,
         rollout=16,
+        recurrence=16,
         batch_size=32768,
         num_epochs=2,
         num_batches_per_epoch=4,
         value_loss_coeff=4.0,
+        ppo_clip_ratio=0.2,
         learning_rate=1e-4,
         lr_schedule_kl_threshold=0.016,
         reward_scale=0.01,
