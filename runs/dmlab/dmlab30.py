@@ -2,7 +2,7 @@ from sample_factory.launcher.run_description import RunDescription, Experiment, 
 from runs.dmlab.baseline import DMLAB30_BASELINE_CLI
 
 _params = ParamGrid([
-    ('seed', [0000, 1111]),
+    ('seed', [0000, 1111, 2222, 3333]),
 ])
 
 DMLAB30_CLI = DMLAB30_BASELINE_CLI + (
