@@ -227,6 +227,16 @@ def add_rl_args(p: ArgumentParser):
         type=float,
     )
     p.add_argument(
+        "--start_target_kl",
+        default=0.15,
+        type=float,
+    )
+    p.add_argument(
+        "--start_kl_steps",
+        default=1000000,
+        type=float,
+    )
+    p.add_argument(
         "--MIN_KL_LOSS_COEFF",
         default=0.001,
         type=float,

@@ -210,6 +210,8 @@ class Learner(Configurable):
         self._second_penalty_loop = True
         self._kl_loss_coeff_lr = cfg.kl_loss_coeff_lr
         self.target_kl = cfg.target_kl
+        self.start_target_kl = cfg.start_target_kl
+        self.start_kl_steps = cfg.start_kl_steps
         self.MIN_KL_LOSS_COEFF = cfg.MIN_KL_LOSS_COEFF
         # =====================================================================
 
@@ -901,8 +903,8 @@ class Learner(Configurable):
             lr=self._kl_loss_coeff_lr,
             momentum=self._kl_loss_coeff_momentum,
         )
-        if self.env_steps < 1e6:
-            self.target_kl = 0.1
+        if self.env_steps < self.start_kl_steps:
+            self.target_kl = self.start_target_kl
         # =====================================================================
 
         with torch.no_grad():
