@@ -3,7 +3,8 @@ from sf_examples.mujoco.runs.baseline import ANT_BASELINE_CLI
 
 _params = ParamGrid([
     ('seed', [0000, 1111]),
-    ('start_target_kl', [0.5, 1.0]),
+    ('start_target_kl', [0.5]),
+    ('START_MIN_KL_LOSS_COEFF', [0.003, 0.004]),
     ('start_kl_steps', [1000000, 2000000]),
 ])
 

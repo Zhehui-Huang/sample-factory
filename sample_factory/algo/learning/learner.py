@@ -214,6 +214,8 @@ class Learner(Configurable):
         self.start_target_kl = cfg.start_target_kl
         self.start_kl_steps = cfg.start_kl_steps
         self.MIN_KL_LOSS_COEFF = cfg.MIN_KL_LOSS_COEFF
+        self.MIN_KL_LOSS_COEFF_COPY = cfg.MIN_KL_LOSS_COEFF
+        self.START_MIN_KL_LOSS_COEFF = cfg.START_MIN_KL_LOSS_COEFF
         # =====================================================================
 
     def init(self) -> InitModelData:
@@ -906,8 +908,10 @@ class Learner(Configurable):
         )
         if self.env_steps < self.start_kl_steps:
             self.target_kl = self.start_target_kl
+            self.MIN_KL_LOSS_COEFF = self.START_MIN_KL_LOSS_COEFF
         else:
             self.target_kl = self.target_kl_copy
+            self.MIN_KL_LOSS_COEFF = self.MIN_KL_LOSS_COEFF_COPY
         # =====================================================================
 
         with torch.no_grad():
