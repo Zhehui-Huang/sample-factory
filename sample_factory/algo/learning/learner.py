@@ -901,6 +901,8 @@ class Learner(Configurable):
             lr=self._kl_loss_coeff_lr,
             momentum=self._kl_loss_coeff_momentum,
         )
+        if self.env_steps < 1e6:
+            self.target_kl = 0.1
         # =====================================================================
 
         with torch.no_grad():
@@ -1041,6 +1043,8 @@ class Learner(Configurable):
         stats.max_abs_logprob = torch.abs(var.mb.action_logits).max()
         stats.explained_var, stats.explained_var_unbiased = explained_variance(
             var.gpu_buffer['values'].flatten(), var.gpu_buffer['returns'].flatten())
+        stats.target_kl = self.target_kl
+        stats.env_steps = self.env_steps
 
         if hasattr(var.action_distribution, "summaries"):
             stats.update(var.action_distribution.summaries())
