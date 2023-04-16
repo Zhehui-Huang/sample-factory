@@ -2,14 +2,14 @@ from sample_factory.launcher.run_description import RunDescription, Experiment, 
 from sf_examples.mujoco.runs.baseline import ANT_BASELINE_CLI
 
 _params = ParamGrid([
-    ('seed', [0000, 1111]),
-    ('start_kl_loss_coeff_lr', [0.25, 0.5]),
+    ('seed', [0000, 1111, 2222, 3333]),
+    ('start_target_kl', [0.2, 0.4, 0.8]),
+    ('target_kl', [0.05, 0.1]),
     ('start_kl_steps', [1000000, 2000000]),
 ])
 
 ANT_CLI = ANT_BASELINE_CLI + (
-    ' --kl_loss_coeff_lr=0.1 '
-    '--target_kl=0.1 --start_target_kl=0.1 '
+    ' --kl_loss_coeff_lr=0.1 --start_kl_loss_coeff_lr=0.1 '
     '--MIN_KL_LOSS_COEFF=0.001 --START_MIN_KL_LOSS_COEFF=0.001 '
     '--lr_schedule=kl_adaptive_minibatch '
     '--with_wandb=True --wandb_project=stabilized-rl '
