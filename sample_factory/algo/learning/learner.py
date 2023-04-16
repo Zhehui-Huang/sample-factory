@@ -209,6 +209,8 @@ class Learner(Configurable):
         self._kl_target_stat = "max"
         self._second_penalty_loop = True
         self._kl_loss_coeff_lr = cfg.kl_loss_coeff_lr
+        self._kl_loss_coeff_lr_copy = cfg.kl_loss_coeff_lr
+        self._start_kl_loss_coeff_lr = cfg.start_kl_loss_coeff_lr
         self.target_kl = cfg.target_kl
         self.target_kl_copy = cfg.target_kl
         self.start_target_kl = cfg.start_target_kl
@@ -899,6 +901,15 @@ class Learner(Configurable):
 
         # xPPO
         # =====================================================================
+        if self.env_steps < self.start_kl_steps:
+            self._kl_loss_coeff_lr = self._start_kl_loss_coeff_lr
+            self.target_kl = self.start_target_kl
+            self.MIN_KL_LOSS_COEFF = self.START_MIN_KL_LOSS_COEFF
+        else:
+            self._kl_loss_coeff_lr = self._kl_loss_coeff_lr_copy
+            self.target_kl = self.target_kl_copy
+            self.MIN_KL_LOSS_COEFF = self.MIN_KL_LOSS_COEFF_COPY
+
         self._kl_loss_coeff_param = torch.nn.Parameter(torch.tensor(1.0))
         # TODO: SGD or Adam ?
         kl_loss_coeff_opt = torch.optim.SGD(
@@ -906,12 +917,6 @@ class Learner(Configurable):
             lr=self._kl_loss_coeff_lr,
             momentum=self._kl_loss_coeff_momentum,
         )
-        if self.env_steps < self.start_kl_steps:
-            self.target_kl = self.start_target_kl
-            self.MIN_KL_LOSS_COEFF = self.START_MIN_KL_LOSS_COEFF
-        else:
-            self.target_kl = self.target_kl_copy
-            self.MIN_KL_LOSS_COEFF = self.MIN_KL_LOSS_COEFF_COPY
         # =====================================================================
 
         with torch.no_grad():

@@ -222,13 +222,18 @@ def add_rl_args(p: ArgumentParser):
         type=float,
     )
     p.add_argument(
+        "--start_kl_loss_coeff_lr",
+        default=0.1,
+        type=float,
+    )
+    p.add_argument(
         "--target_kl",
         default=0.1,
         type=float,
     )
     p.add_argument(
         "--start_target_kl",
-        default=0.15,
+        default=0.1,
         type=float,
     )
     p.add_argument(
