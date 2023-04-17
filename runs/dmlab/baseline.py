@@ -6,5 +6,5 @@ DMLAB30_BASELINE_CLI = (
     '--encoder_conv_mlp_layers=512 --nonlinearity=relu --rnn_type=lstm --dmlab_extended_action_set=True '
     '--num_policies=1 --experiment=sf_ori_dmlab_30 --set_workers_cpu_affinity=True --max_policy_lag=35 '
     ' --dmlab30_dataset=/home/zhehui/mixppo/dmlab/datasets/brady_konkle_oliva2008 --dmlab_use_level_cache=True '
-    '--dmlab_level_cache_path=/home/zhehui/mixppo/dmlab/.dmlab_cache'
+    '--dmlab_one_task_per_worker=True  --dmlab_level_cache_path=/home/zhehui/mixppo/dmlab/.dmlab_cache'
 )
