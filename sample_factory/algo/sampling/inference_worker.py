@@ -34,7 +34,7 @@ from sample_factory.utils.dicts import dict_of_lists_append_idx
 from sample_factory.utils.gpu_utils import cuda_envvars_for_policy
 from sample_factory.utils.timing import Timing
 from sample_factory.utils.typing import Device, InitModelData, MpQueue, PolicyID
-from sample_factory.utils.utils import debug_log_every_n, init_file_logger, log, retry_run
+from sample_factory.utils.utils import debug_log_every_n, init_file_logger, log
 
 AdvanceRolloutSignals = Dict[int, List[Tuple[int, PolicyID]]]
 PrepareOutputsFunc = Callable[[int, TensorDict, List], AdvanceRolloutSignals]
@@ -241,7 +241,7 @@ class InferenceWorker(HeartbeatStoppableEventLoopObject, Configurable):
         if num_samples <= 1:
             self._unsqueeze_0dim_tensors(policy_outputs)
 
-        # actions are handled differently in the batched version so we have to convert them to
+        # actions are handled differently in the batched version, so we have to convert them to
         # [batch_size, num_actions]
         if policy_outputs["actions"].ndim < 2:
             policy_outputs["actions"] = policy_outputs["actions"].unsqueeze(-1)
@@ -251,7 +251,7 @@ class InferenceWorker(HeartbeatStoppableEventLoopObject, Configurable):
         ofs = 0
         devices_to_sync = set()
         for actor_idx, split_idx, _, device in requests:
-            self.policy_output_tensors[device][actor_idx, split_idx] = policy_outputs[ofs : ofs + samples_per_actor]
+            self.policy_output_tensors[device][actor_idx, split_idx] = policy_outputs[ofs: ofs + samples_per_actor]
             ofs += samples_per_actor
             devices_to_sync.add(device)
 
@@ -358,7 +358,6 @@ class InferenceWorker(HeartbeatStoppableEventLoopObject, Configurable):
             except Empty:
                 pass
 
-    @retry_run(5, exceptions=(Exception,))
     def _run(self):
         self._get_inference_requests_func()
         if not self.requests:

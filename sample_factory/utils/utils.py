@@ -185,37 +185,6 @@ def retry(times, exceptions):
     return decorator
 
 
-def retry_run(times, exceptions):
-    """
-    Retry Decorator https://stackoverflow.com/a/64030200/1645784
-    Retries the wrapped function/method `times` times if the exceptions listed
-    in ``exceptions`` are thrown
-    :param times: The number of times to repeat the wrapped function/method
-    :type times: Int
-    :param exceptions: Lists of exceptions that trigger a retry attempt
-    :type exceptions: Tuple of Exceptions
-    """
-
-    def decorator(func):
-        def _run(*args, **kwargs):
-            attempt = 0
-            while attempt < times:
-                try:
-                    return func(*args, **kwargs)
-                except exceptions:
-                    log.warning(f"Exception thrown when attempting to run {func}, attempt {attempt} out of {times}")
-                    time.sleep(min(2**attempt, 10))
-                    attempt += 1
-
-            return func(*args, **kwargs)
-
-        return _run
-
-    return decorator
-
-# CLI args
-
-
 def str2bool(v):
     if isinstance(v, bool):
         return v
@@ -355,7 +324,7 @@ def cores_for_worker_process(worker_idx, num_workers, cpu_count):
     cores = None
     whole_workers_per_core = num_workers // cpu_count
     if worker_idx < whole_workers_per_core * cpu_count:
-        # these workers get an private core each
+        # these workers get a private core each
         cores = [worker_idx_modulo]
     else:
         # we're dealing with some number of workers that is less than # of cpu cores
