@@ -999,16 +999,18 @@ class Learner(Configurable):
             if num_invalids > 0:
                 invalid_fraction = num_invalids / dataset_size
                 if invalid_fraction > 0.5:
-                    log.warning(f"{self.policy_id=} batch has {invalid_fraction:.2%} of invalid samples")
+                    log.warning(f"{self.policy_id=} batch has {invalid_fraction:.5%} of invalid samples")
 
                 # invalid action values can cause problems when we calculate logprobs
                 # here we set them to 0 just to be safe
                 invalid_indices = (buff["valids"] == 0).nonzero().squeeze()
-                valid_indices = (buff["valids"] == 1).nonzero().squeeze()
-                buff["actions"][invalid_indices] = torch.mean(buff["actions"][valid_indices], axis=0)
-                # likewise, some invalid values of log_prob_actions can cause NaNs or infs
-                buff["log_prob_actions"][invalid_indices] = torch.mean(buff["log_prob_actions"][valid_indices], axis=0)
-                # -1 seems like a safe value
+                if invalid_fraction < 1.0:
+                    valid_indices = (buff["valids"] == 1).nonzero().squeeze()
+                    buff["actions"][invalid_indices] = torch.mean(buff["actions"][valid_indices], axis=0)
+                    buff["log_prob_actions"][invalid_indices] = torch.mean(buff["log_prob_actions"][valid_indices], axis=0)
+                else:
+                    buff["actions"][invalid_indices] = 0.0
+                    buff["log_prob_actions"][invalid_indices] = -1.0  # -1 seems like a safe value
 
             return buff, dataset_size, num_invalids
 
