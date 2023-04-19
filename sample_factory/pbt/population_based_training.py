@@ -32,7 +32,7 @@ def perturb_vtrace(x, _cfg):
     return perturb_float(x, perturb_amount=1.005)
 
 
-def perturb_exponential_decay(x, _cfg, perturb_amount_min=1.01, perturb_amount_max=1.05):
+def perturb_exponential_decay(x, _cfg, perturb_amount_min=1.01, perturb_amount_max=1.2):
     # very conservative values, things like gamma should not change quickly
     perturb_amount = random.uniform(perturb_amount_min, perturb_amount_max)
     perturbed = perturb_float(1.0 - x, perturb_amount=perturb_amount)
@@ -63,7 +63,6 @@ HYPERPARAMS_TO_TUNE = {
     "max_grad_norm",
     "ppo_clip_ratio",
     "ppo_clip_value",
-    "max_entropy_coeff",
     # gamma can be added with a CLI parameter (--pbt_optimize_gamma=True)
 }
 

@@ -185,6 +185,9 @@ def retry(times, exceptions):
     return decorator
 
 
+# CLI args
+
+
 def str2bool(v):
     if isinstance(v, bool):
         return v
