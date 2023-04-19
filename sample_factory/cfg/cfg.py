@@ -238,7 +238,7 @@ def add_rl_args(p: ArgumentParser):
     )
     p.add_argument(
         "--start_kl_steps",
-        default=1000000,
+        default=0,
         type=float,
     )
     p.add_argument(
