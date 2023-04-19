@@ -912,10 +912,11 @@ class Learner(Configurable):
 
         self._kl_loss_coeff_param = torch.nn.Parameter(torch.tensor(1.0))
         # TODO: SGD or Adam ?
-        kl_loss_coeff_opt = torch.optim.SGD(
+        kl_loss_coeff_opt = torch.optim.Adam(
             [self._kl_loss_coeff_param],
             lr=self._kl_loss_coeff_lr,
-            momentum=self._kl_loss_coeff_momentum,
+            betas=(self.cfg.adam_beta1, self.cfg.adam_beta2),
+            eps=self.cfg.adam_eps,
         )
         # =====================================================================
 
