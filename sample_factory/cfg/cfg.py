@@ -216,6 +216,13 @@ def add_rl_args(p: ArgumentParser):
         help="Coefficient for fixed KL loss (as used by Schulman et al. in https://arxiv.org/pdf/1707.06347.pdf). "
         "Highly recommended for environments with continuous action spaces.",
     )
+
+
+    p.add_argument(
+        "--kl_loss_coeff_momentum",
+        default=0.999,
+        type=float,
+    )
     p.add_argument(
         "--kl_loss_coeff_lr",
         default=0.1,

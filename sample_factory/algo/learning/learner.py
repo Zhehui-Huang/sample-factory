@@ -201,7 +201,7 @@ class Learner(Configurable):
         # xPPO
         # =====================================================================
         self._kl_loss_coeff_param = torch.nn.Parameter(torch.tensor(1.0))
-        self._kl_loss_coeff_momentum = 0.999
+        self._kl_loss_coeff_momentum = cfg.kl_loss_coeff_momentum
         self._use_minibatch_kl_penalty = True
         self._optimize_log_loss_coeff = False
         self._initial_policy_opt_state_dict = None
