@@ -3,8 +3,8 @@ from runs.dmlab.baseline import SMALL_NUM_ENV_DMLAB30_BASELINE_CLI
 
 _params = ParamGrid([
     ('seed', [0000]),
-    ('target_kl', [0.001]),
-    ('kl_loss_coeff_lr', [0.5, 2.0, 5.0, 10.0, 20.0]),
+    ('target_kl', [0.01, 0.05]),
+    ('kl_loss_coeff_lr', [0.5, 3.0, 10.0]),
     ('kl_loss_coeff_momentum', [0.99999]),
 ])
 
@@ -14,7 +14,7 @@ DMLAB30_CLI = SMALL_NUM_ENV_DMLAB30_BASELINE_CLI + (
 )
 
 _experiment = Experiment(
-    'small_dmlab_sf_xppo_target_kl_search_v5',
+    'small_dmlab_sf_xppo_target_kl_search_v6',
     DMLAB30_CLI,
     _params.generate_params(randomize=False),
 )
