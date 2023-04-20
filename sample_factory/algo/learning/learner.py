@@ -218,6 +218,7 @@ class Learner(Configurable):
         self.MIN_KL_LOSS_COEFF = cfg.MIN_KL_LOSS_COEFF
         self.MIN_KL_LOSS_COEFF_COPY = cfg.MIN_KL_LOSS_COEFF
         self.START_MIN_KL_LOSS_COEFF = cfg.START_MIN_KL_LOSS_COEFF
+        self.second_penalty_loops = []
         # =====================================================================
 
     def init(self) -> InitModelData:
@@ -876,7 +877,7 @@ class Learner(Configurable):
                 should_record_summaries &= epoch == summaries_epoch and batch_num == summaries_batch
                 should_record_summaries |= force_summaries
                 if should_record_summaries:
-                    # hacky way to collect all of the intermediate variables for summaries
+                    # hacky way to collect all the intermediate variables for summaries
                     summary_vars = {**locals(), **loss_summaries}
                     stats_and_summaries = self._record_summaries(AttrDict(summary_vars))
                     del summary_vars
@@ -953,7 +954,7 @@ class Learner(Configurable):
 
         # xPPO
         # =====================================================================
-        second_penalty_loops = []
+        self.second_penalty_loops = []
         # =====================================================================
         for epoch in range(self.cfg.num_epochs):
             with timing.add_time("epoch_init"):
@@ -998,7 +999,7 @@ class Learner(Configurable):
                         summaries_epoch=summaries_epoch, with_summaries=with_summaries, timing=timing,
                         experience_size=experience_size, epoch=epoch)
                 penalty_loops += 1
-            second_penalty_loops.append(penalty_loops)
+            self.second_penalty_loops.append(penalty_loops)
             # =====================================================================
 
             # end of an epoch
@@ -1019,6 +1020,15 @@ class Learner(Configurable):
 
             prev_epoch_actor_loss = new_epoch_actor_loss
 
+
+        # xPPO
+        # =====================================================================
+        if stats_and_summaries is not None:
+            stats_and_summaries.final_second_penalty_loops = self.second_penalty_loops[-1]
+            stats_and_summaries.mean_second_penalty_loops = np.mean(self.second_penalty_loops)
+            stats_and_summaries.min_second_penalty_loops = np.min(self.second_penalty_loops)
+            stats_and_summaries.max_second_penalty_loops = np.max(self.second_penalty_loops)
+        # =====================================================================
         return stats_and_summaries
 
     def _record_summaries(self, train_loop_vars) -> AttrDict:
@@ -1055,10 +1065,12 @@ class Learner(Configurable):
         stats.adv_std = var.adv_std
         stats.adv_mean = var.adv_mean
         stats.max_abs_logprob = torch.abs(var.mb.action_logits).max()
+
+        # xPPO
+        # =====================================================================
         stats.explained_var, stats.explained_var_unbiased = explained_variance(
             var.gpu_buffer['values'].flatten(), var.gpu_buffer['returns'].flatten())
-        stats.target_kl = self.target_kl
-        stats.env_steps = self.env_steps
+        # =====================================================================
 
         if hasattr(var.action_distribution, "summaries"):
             stats.update(var.action_distribution.summaries())
