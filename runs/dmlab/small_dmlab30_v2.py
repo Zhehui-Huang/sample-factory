@@ -2,9 +2,9 @@ from sample_factory.launcher.run_description import RunDescription, Experiment, 
 from runs.dmlab.baseline import SMALL_NUM_ENV_DMLAB30_BASELINE_CLI
 
 _params = ParamGrid([
-    ('seed', [0000]),
-    ('target_kl', [0.001, 0.05]),
-    ('kl_loss_coeff_lr', [0.5, 3.0]),
+    ('seed', [0000, 1111, 2222, 3333]),
+    ('target_kl', [0.001]),
+    ('kl_loss_coeff_lr', [3.0]),
     ('kl_loss_coeff_momentum', [0.99999]),
 ])
 
