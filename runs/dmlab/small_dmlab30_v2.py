@@ -6,6 +6,7 @@ _params = ParamGrid([
     ('target_kl', [0.001]),
     ('kl_loss_coeff_lr', [3.0]),
     ('kl_loss_coeff_momentum', [0.99999]),
+    ('num_batches_per_epoch', [2, 4]),
 ])
 
 DMLAB30_CLI = SMALL_NUM_ENV_DMLAB30_BASELINE_CLI + (
@@ -14,7 +15,7 @@ DMLAB30_CLI = SMALL_NUM_ENV_DMLAB30_BASELINE_CLI + (
 )
 
 _experiment = Experiment(
-    'small_dmlab_sf_xppo_target_kl_search_v7',
+    'small_dmlab_sf_xppo_target_kl_search_v8',
     DMLAB30_CLI,
     _params.generate_params(randomize=False),
 )
