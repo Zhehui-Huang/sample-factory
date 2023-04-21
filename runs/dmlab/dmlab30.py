@@ -13,7 +13,7 @@ DMLAB30_CLI = DMLAB30_BASELINE_CLI + (
 )
 
 _experiment = Experiment(
-    'dmlab_sf_xppo_target_kl_v3',
+    'dmlab_sf_xppo_target_kl_001',
     DMLAB30_CLI,
     _params.generate_params(randomize=False),
 )
