@@ -3,13 +3,13 @@ from runs.dmlab.baseline import DMLAB30_BASELINE_CLI
 
 _params = ParamGrid([
     ('seed', [0000, 1111, 2222, 3333]),
-    ('target_kl', [0.05]),
+    ('target_kl', [0.001]),
     ('kl_loss_coeff_lr', [3.0]),
 ])
 
 DMLAB30_CLI = DMLAB30_BASELINE_CLI + (
     ' --sparse_second_loop=True --MIN_KL_LOSS_COEFF=0.001 --start_kl_steps=0 '
-    '--with_wandb=True --wandb_project=stabilized-rl --wandb_group=dmlab_sf_xppo --wandb_user=resl-mixppo'
+    '--with_wandb=True --wandb_project=stabilized-rl --wandb_group=dmlab_sf_xppo_tkl_001 --wandb_user=resl-mixppo'
 )
 
 _experiment = Experiment(
