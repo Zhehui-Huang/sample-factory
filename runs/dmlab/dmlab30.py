@@ -8,12 +8,12 @@ _params = ParamGrid([
 ])
 
 DMLAB30_CLI = DMLAB30_BASELINE_CLI + (
-    ' --MIN_KL_LOSS_COEFF=0.001 --start_kl_steps=0 '
+    ' --sparse_second_loop=True --MIN_KL_LOSS_COEFF=0.001 --start_kl_steps=0 '
     '--with_wandb=True --wandb_project=stabilized-rl --wandb_group=dmlab_sf_xppo --wandb_user=resl-mixppo'
 )
 
 _experiment = Experiment(
-    'dmlab_sf_xppo_target_kl_v2',
+    'dmlab_sf_xppo_target_kl_v3',
     DMLAB30_CLI,
     _params.generate_params(randomize=False),
 )
