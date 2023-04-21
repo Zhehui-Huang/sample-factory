@@ -765,7 +765,7 @@ class Learner(Configurable):
 
     def _minibatch_step(self, minibatches, batch_num, gpu_buffer, num_invalids, epoch_actor_losses, kl_loss_coeff_opt,
                         num_sgd_steps, recent_kls, use_pg_loss, force_summaries, summaries_batch, summaries_epoch,
-                        with_summaries, timing, experience_size, epoch):
+                        with_summaries, timing, experience_size, epoch, stats_and_summaries):
         with torch.no_grad(), timing.add_time("minibatch_init"):
             if use_pg_loss:
                 indices = minibatches[batch_num]
@@ -790,7 +790,7 @@ class Learner(Configurable):
 
         if self.second_loop_kl_exit_middle:
             return force_summaries, kl_old, num_sgd_steps, summaries_batch, kl_loss_coeff_opt, recent_kls, with_summaries, \
-                None
+                stats_and_summaries
 
         with timing.add_time("losses_postprocess"):
             # xPPO
@@ -899,15 +899,11 @@ class Learner(Configurable):
                     stats_and_summaries = self._record_summaries(AttrDict(summary_vars))
                     del summary_vars
                     force_summaries = False
-                else:
-                    stats_and_summaries = None
 
                 # make sure everything (such as policy weights) is committed to shared device memory
                 synchronize(self.cfg, self.device)
                 # this will force policy update on the inference worker (policy worker)
                 self.policy_versions_tensor[self.policy_id] = self.train_step
-        else:
-            stats_and_summaries = None
 
         return force_summaries, kl_old, num_sgd_steps, summaries_batch, kl_loss_coeff_opt, recent_kls, with_summaries, \
             stats_and_summaries
@@ -996,7 +992,7 @@ class Learner(Configurable):
                         num_sgd_steps=num_sgd_steps, recent_kls=recent_kls, use_pg_loss=True,
                         force_summaries=force_summaries, summaries_batch=summaries_batch,
                         summaries_epoch=summaries_epoch, with_summaries=with_summaries, timing=timing,
-                        experience_size=experience_size, epoch=epoch)
+                        experience_size=experience_size, epoch=epoch, stats_and_summaries=stats_and_summaries)
 
             # xPPO
             # =====================================================================
@@ -1016,7 +1012,7 @@ class Learner(Configurable):
                                 num_sgd_steps=num_sgd_steps, recent_kls=recent_kls, use_pg_loss=False,
                                 force_summaries=force_summaries, summaries_batch=summaries_batch,
                                 summaries_epoch=summaries_epoch, with_summaries=with_summaries, timing=timing,
-                                experience_size=experience_size, epoch=epoch)
+                                experience_size=experience_size, epoch=epoch, stats_and_summaries=stats_and_summaries)
 
                         if (kl_old <= self.target_kl).all():
                             skipped_minibatches += 1
