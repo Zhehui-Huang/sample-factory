@@ -258,6 +258,11 @@ def add_rl_args(p: ArgumentParser):
         default=0.001,
         type=float,
     )
+    p.add_argument(
+        "--sparse_second_loop",
+        default=True,
+        type=str2bool,
+    )
 
     p.add_argument(
         "--exploration_loss",
