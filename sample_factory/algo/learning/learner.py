@@ -625,7 +625,7 @@ class Learner(Configurable):
         return mb
 
     def _calculate_losses(
-        self, mb: AttrDict, num_invalids: int, use_pg_loss:bool
+        self, mb: AttrDict, num_invalids: int, use_pg_loss: bool
     ) -> Tuple[ActionDistribution, Tensor, Tensor | float, Optional[Tensor], Tensor | float, Tensor, Dict]:
         with torch.no_grad(), self.timing.add_time("losses_init"):
             recurrence: int = self.cfg.recurrence
@@ -742,14 +742,19 @@ class Learner(Configurable):
             # noinspection PyTypeChecker
             # xPPO
             # =====================================================================
-            policy_loss = self._policy_loss(ratio, adv, valids, num_invalids)
+            if use_pg_loss:
+                policy_loss = self._policy_loss(ratio, adv, valids, num_invalids)
+                exploration_loss = self.exploration_loss_func(action_distribution, valids, num_invalids)
+                old_values = mb["values"]
+                value_loss = self._value_loss(values, old_values, targets, clip_value, valids, num_invalids)
+            else:
+                policy_loss = 0.0
+                exploration_loss = 0.0
+                value_loss = 0.0
             # =====================================================================
-            exploration_loss = self.exploration_loss_func(action_distribution, valids, num_invalids)
             kl_old, kl_loss = self.kl_loss_func(
                 self.actor_critic.action_space, mb.action_logits, action_distribution, valids, num_invalids, use_pg_loss
             )
-            old_values = mb["values"]
-            value_loss = self._value_loss(values, old_values, targets, clip_value, valids, num_invalids)
 
         loss_summaries = dict(
             ratio=ratio,
@@ -803,6 +808,10 @@ class Learner(Configurable):
                 epoch_actor_losses[batch_num] = float(actor_loss)
             else:
                 loss: Tensor = kl_loss
+                policy_loss = to_scalar(policy_loss)
+                value_loss = to_scalar(value_loss)
+                exploration_loss = to_scalar(exploration_loss)
+                epoch_actor_losses[batch_num] = to_scalar(kl_loss)
             # =====================================================================
 
             high_loss = 30.0
