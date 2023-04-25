@@ -280,25 +280,6 @@ class Learner(Configurable):
                 except Exception:
                     log.exception(f"Could not load from checkpoint, attempt {attempt}")
 
-        # Load from the best checkpoint
-        log.debug("Loading state from the best checkpoint...")
-        name_prefix = dict(latest="checkpoint", best="best")["best"]
-        checkpoints = self.get_checkpoints(self.checkpoint_dir(self.cfg, policy_id), pattern=f"{name_prefix}_*")
-        if len(checkpoints) <= 0:
-            log.warning("No checkpoints found")
-            return None
-        else:
-            latest_checkpoint = checkpoints[-1]
-
-        for attempt in range(num_attempts):
-            # noinspection PyBroadException
-            try:
-                log.warning(f"Loading state from the best checkpoint %s...", latest_checkpoint)
-                checkpoint_dict = torch.load(latest_checkpoint, map_location=device)
-                return checkpoint_dict
-            except Exception:
-                log.exception(f"Could not load from the best checkpoint, attempt {attempt}")
-
     def _load_state(self, checkpoint_dict, load_progress=True):
         if load_progress:
             self.train_step = checkpoint_dict["train_step"]
@@ -313,20 +294,6 @@ class Learner(Configurable):
     def load_from_checkpoint(self, policy_id: PolicyID, load_progress: bool = True) -> None:
         name_prefix = dict(latest="checkpoint", best="best")[self.cfg.load_checkpoint_kind]
         checkpoints = self.get_checkpoints(self.checkpoint_dir(self.cfg, policy_id), pattern=f"{name_prefix}_*")
-
-        if len(checkpoints) <= 0:
-            log.warning("load_from_checkpoint: No checkpoints found")
-        else:
-            latest_checkpoint = checkpoints[-1]
-            for _ in range(3):
-                if "temp" in latest_checkpoint:
-                    log.debug(f"Could not load from temp checkpoint %s...", latest_checkpoint)
-                    time.sleep(1)
-                    checkpoints = self.get_checkpoints(self.checkpoint_dir(self.cfg, policy_id), pattern=f"{name_prefix}_*")
-                    latest_checkpoint = checkpoints[-1]
-                else:
-                    break
-
         checkpoint_dict = self.load_checkpoint(checkpoints, self.device)
         if checkpoint_dict is None:
             log.debug("Did not load from checkpoint, starting from scratch!")
@@ -1026,13 +993,9 @@ class Learner(Configurable):
                 # invalid action values can cause problems when we calculate logprobs
                 # here we set them to 0 just to be safe
                 invalid_indices = (buff["valids"] == 0).nonzero().squeeze()
-                if invalid_fraction < 1.0:
-                    valid_indices = (buff["valids"] == 1).nonzero().squeeze()
-                    buff["actions"][invalid_indices] = torch.mean(buff["actions"][valid_indices], axis=0)
-                    buff["log_prob_actions"][invalid_indices] = torch.mean(buff["log_prob_actions"][valid_indices], axis=0)
-                else:
-                    buff["actions"][invalid_indices] = 0.0
-                    buff["log_prob_actions"][invalid_indices] = -1.0  # -1 seems like a safe value
+                buff["actions"][invalid_indices] = 0
+                # likewise, some invalid values of log_prob_actions can cause NaNs or infs
+                buff["log_prob_actions"][invalid_indices] = -1  # -1 seems like a safe value
 
             return buff, dataset_size, num_invalids
 
