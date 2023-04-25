@@ -221,6 +221,7 @@ class Learner(Configurable):
         self.second_penalty_skip_ratio = []
         self.sparse_second_loop = cfg.sparse_second_loop
         self.second_loop_kl_exit_middle = False
+        self.skip_beginning_steps = cfg.skip_beginning_steps
         # =====================================================================
 
     def init(self) -> InitModelData:
@@ -512,7 +513,7 @@ class Learner(Configurable):
         return value_loss
 
     def _kl_loss(
-        self, action_space, action_logits, action_distribution, valids, num_invalids: int, use_pg_loss:bool
+        self, action_space, action_logits, action_distribution, valids, num_invalids: int, use_pg_loss: bool
     ) -> Tuple[Tensor, Tensor]:
         old_action_distribution = get_action_distribution(action_space, action_logits)
         kl_old = action_distribution.kl_divergence(old_action_distribution)
@@ -1007,29 +1008,30 @@ class Learner(Configurable):
             # =====================================================================
             penalty_loops = 0
             if self.sparse_second_loop:
-                while self._second_penalty_loop:
-                    skipped_minibatches = 0
-                    total_minibatches = 0
-                    minibatches = self._get_minibatches(batch_size, experience_size, shuffle_minibatches=True)
-                    for batch_num in range(len(minibatches)):
-                        total_minibatches += 1
-                        force_summaries, kl_old, num_sgd_steps, summaries_batch, kl_loss_coeff_opt, recent_kls, \
-                            with_summaries, stats_and_summaries = self._minibatch_step(
-                                minibatches=minibatches, batch_num=summaries_batch, gpu_buffer=gpu_buffer,
-                                num_invalids=num_invalids,
-                                epoch_actor_losses=epoch_actor_losses, kl_loss_coeff_opt=kl_loss_coeff_opt,
-                                num_sgd_steps=num_sgd_steps, recent_kls=recent_kls, use_pg_loss=False,
-                                force_summaries=force_summaries, summaries_batch=summaries_batch,
-                                summaries_epoch=summaries_epoch, with_summaries=with_summaries, timing=timing,
-                                experience_size=experience_size, epoch=epoch, stats_and_summaries=stats_and_summaries)
+                if self.env_steps > self.skip_beginning_steps:
+                    while self._second_penalty_loop:
+                        skipped_minibatches = 0
+                        total_minibatches = 0
+                        minibatches = self._get_minibatches(batch_size, experience_size, shuffle_minibatches=True)
+                        for batch_num in range(len(minibatches)):
+                            total_minibatches += 1
+                            force_summaries, kl_old, num_sgd_steps, summaries_batch, kl_loss_coeff_opt, recent_kls, \
+                                with_summaries, stats_and_summaries = self._minibatch_step(
+                                    minibatches=minibatches, batch_num=summaries_batch, gpu_buffer=gpu_buffer,
+                                    num_invalids=num_invalids,
+                                    epoch_actor_losses=epoch_actor_losses, kl_loss_coeff_opt=kl_loss_coeff_opt,
+                                    num_sgd_steps=num_sgd_steps, recent_kls=recent_kls, use_pg_loss=False,
+                                    force_summaries=force_summaries, summaries_batch=summaries_batch,
+                                    summaries_epoch=summaries_epoch, with_summaries=with_summaries, timing=timing,
+                                    experience_size=experience_size, epoch=epoch, stats_and_summaries=stats_and_summaries)
 
-                        if (kl_old <= self.target_kl).all():
-                            skipped_minibatches += 1
+                            if (kl_old <= self.target_kl).all():
+                                skipped_minibatches += 1
 
-                    self.second_penalty_skip_ratio.append(skipped_minibatches / total_minibatches)
-                    penalty_loops += 1
-                    if skipped_minibatches == total_minibatches:
-                        break
+                        self.second_penalty_skip_ratio.append(skipped_minibatches / total_minibatches)
+                        penalty_loops += 1
+                        if skipped_minibatches == total_minibatches:
+                            break
             else:
                 while self._second_penalty_loop:
                     if self._kl_target_stat == "mean":
@@ -1045,7 +1047,7 @@ class Learner(Configurable):
                             num_sgd_steps=num_sgd_steps, recent_kls=recent_kls, use_pg_loss=False,
                             force_summaries=force_summaries, summaries_batch=summaries_batch,
                             summaries_epoch=summaries_epoch, with_summaries=with_summaries, timing=timing,
-                            experience_size=experience_size, epoch=epoch)
+                            experience_size=experience_size, epoch=epoch, stats_and_summaries=stats_and_summaries)
                     penalty_loops += 1
             self.second_penalty_loops.append(penalty_loops)
             # =====================================================================

@@ -263,6 +263,11 @@ def add_rl_args(p: ArgumentParser):
         default=True,
         type=str2bool,
     )
+    p.add_argument(
+        "--skip_beginning_steps",
+        default=0,
+        type=int,
+    )
 
     p.add_argument(
         "--exploration_loss",
