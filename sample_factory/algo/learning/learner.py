@@ -775,12 +775,12 @@ class Learner(Configurable):
                         num_sgd_steps, recent_kls, use_pg_loss, force_summaries, summaries_batch, summaries_epoch,
                         with_summaries, timing, experience_size, epoch, stats_and_summaries):
         with torch.no_grad(), timing.add_time("minibatch_init"):
-            if use_pg_loss:
-                indices = minibatches[batch_num]
-                # current minibatch consisting of short trajectory segments with length == recurrence
-                mb = self._get_minibatch(gpu_buffer, indices)
-            else:
-                mb = gpu_buffer
+            # if use_pg_loss or self.sparse_second_loop:
+            indices = minibatches[batch_num]
+            # current minibatch consisting of short trajectory segments with length == recurrence
+            mb = self._get_minibatch(gpu_buffer, indices)
+            # else:
+            #     mb = gpu_buffer
 
             # enable syntactic sugar that allows us to access dict's keys as object attributes
             mb = AttrDict(mb)
