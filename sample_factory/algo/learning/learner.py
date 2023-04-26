@@ -199,7 +199,7 @@ class Learner(Configurable):
 
         # xPPO
         # =====================================================================
-        self._kl_loss_coeff_param = torch.nn.Parameter(torch.tensor(1.0))
+        self._kl_loss_coeff_param = torch.nn.Parameter(torch.tensor(100.0))
         self._kl_loss_coeff_momentum = cfg.kl_loss_coeff_momentum
         self._use_minibatch_kl_penalty = True
         self._optimize_log_loss_coeff = False
@@ -943,7 +943,7 @@ class Learner(Configurable):
             self.target_kl = self.target_kl_copy
             self.MIN_KL_LOSS_COEFF = self.MIN_KL_LOSS_COEFF_COPY
 
-        self._kl_loss_coeff_param = torch.nn.Parameter(torch.tensor(1.0))
+        self._kl_loss_coeff_param = torch.nn.Parameter(torch.tensor(100.0))
         # TODO: SGD or Adam ?
         kl_loss_coeff_opt = torch.optim.SGD(
             [self._kl_loss_coeff_param],

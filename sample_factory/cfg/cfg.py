@@ -270,7 +270,7 @@ def add_rl_args(p: ArgumentParser):
     )
     p.add_argument(
         "--MAX_KL_LOSS_COEFF",
-        default=100.0,
+        default=200.0,
         type=float,
     )
     p.add_argument(

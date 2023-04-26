@@ -3,7 +3,7 @@ from runs.dmlab.baseline import DMLAB30_BASELINE_CLI
 
 _params = ParamGrid([
     ('seed', [0000, 1111, 2222, 3333]),
-    ('skip_beginning_steps', [10000000, 20000000]),
+    ('MAX_KL_LOSS_COEFF', [200, 400]),
 ])
 
 DMLAB30_CLI = DMLAB30_BASELINE_CLI + (
