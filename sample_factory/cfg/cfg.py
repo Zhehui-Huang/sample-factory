@@ -273,6 +273,11 @@ def add_rl_args(p: ArgumentParser):
         default=100.0,
         type=float,
     )
+    p.add_argument(
+        "--second_loop_max",
+        default=-1,
+        type=int,
+    )
 
     p.add_argument(
         "--exploration_loss",

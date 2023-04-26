@@ -223,6 +223,7 @@ class Learner(Configurable):
         self.sparse_second_loop = cfg.sparse_second_loop
         self.second_loop_kl_exit_middle = False
         self.skip_beginning_steps = cfg.skip_beginning_steps
+        self.second_loop_max = cfg.second_loop_max
         # =====================================================================
 
     def init(self) -> InitModelData:
@@ -1017,7 +1018,10 @@ class Learner(Configurable):
             penalty_loops = 0
             if self.sparse_second_loop:
                 if self.env_steps > self.skip_beginning_steps:
+                    second_loop_count = 0
                     while self._second_penalty_loop:
+                        if 0 < self.second_loop_max < second_loop_count:
+                            break
                         skipped_minibatches = 0
                         total_minibatches = 0
                         minibatches = self._get_minibatches(batch_size, experience_size, shuffle_minibatches=True)
@@ -1040,6 +1044,7 @@ class Learner(Configurable):
                         penalty_loops += 1
                         if skipped_minibatches == total_minibatches:
                             break
+                        second_loop_count += 1
             else:
                 while self._second_penalty_loop:
                     if self._kl_target_stat == "mean":
@@ -1081,6 +1086,7 @@ class Learner(Configurable):
         # xPPO
         # =====================================================================
         if stats_and_summaries is not None:
+            stats_and_summaries._kl_loss_coeff_param = self._kl_loss_coeff_param.detach()
             if self.second_penalty_loops:
                 stats_and_summaries.final_second_penalty_loops = self.second_penalty_loops[-1]
                 stats_and_summaries.mean_second_penalty_loops = np.mean(self.second_penalty_loops)
