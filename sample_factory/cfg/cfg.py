@@ -268,6 +268,11 @@ def add_rl_args(p: ArgumentParser):
         default=0,
         type=int,
     )
+    p.add_argument(
+        "--MAX_KL_LOSS_COEFF",
+        default=100.0,
+        type=float,
+    )
 
     p.add_argument(
         "--exploration_loss",
