@@ -259,24 +259,9 @@ def add_rl_args(p: ArgumentParser):
         type=float,
     )
     p.add_argument(
-        "--sparse_second_loop",
-        default=True,
-        type=str2bool,
-    )
-    p.add_argument(
-        "--skip_beginning_steps",
-        default=0,
-        type=int,
-    )
-    p.add_argument(
         "--MAX_KL_LOSS_COEFF",
-        default=100.0,
+        default=1000.0,
         type=float,
-    )
-    p.add_argument(
-        "--second_loop_max",
-        default=-1,
-        type=int,
     )
 
     p.add_argument(

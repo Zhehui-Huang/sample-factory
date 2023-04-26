@@ -199,7 +199,7 @@ class Learner(Configurable):
 
         # xPPO
         # =====================================================================
-        self._kl_loss_coeff_param = torch.nn.Parameter(torch.tensor(1.0))
+        self._kl_loss_coeff_param = torch.nn.Parameter(torch.tensor(100.0))
         self._kl_loss_coeff_momentum = cfg.kl_loss_coeff_momentum
         self._use_minibatch_kl_penalty = True
         self._optimize_log_loss_coeff = False
@@ -219,11 +219,6 @@ class Learner(Configurable):
         self.START_MIN_KL_LOSS_COEFF = cfg.START_MIN_KL_LOSS_COEFF
         self.MAX_KL_LOSS_COEFF = cfg.MAX_KL_LOSS_COEFF
         self.second_penalty_loops = []
-        self.second_penalty_skip_ratio = []
-        self.sparse_second_loop = cfg.sparse_second_loop
-        self.second_loop_kl_exit_middle = False
-        self.skip_beginning_steps = cfg.skip_beginning_steps
-        self.second_loop_max = cfg.second_loop_max
         # =====================================================================
 
     def init(self) -> InitModelData:
@@ -515,7 +510,7 @@ class Learner(Configurable):
         return value_loss
 
     def _kl_loss(
-        self, action_space, action_logits, action_distribution, valids, num_invalids: int, use_pg_loss: bool
+        self, action_space, action_logits, action_distribution, valids, num_invalids: int
     ) -> Tuple[Tensor, Tensor]:
         old_action_distribution = get_action_distribution(action_space, action_logits)
         kl_old = action_distribution.kl_divergence(old_action_distribution)
@@ -534,18 +529,7 @@ class Learner(Configurable):
         else:
             loss_coeff_param = self._kl_loss_coeff_param
 
-        if use_pg_loss:
-            kl_loss = loss_coeff_param.detach() * kl_loss
-        else:
-            if self.sparse_second_loop:
-                need_loss = (kl_old > self.target_kl)
-                if need_loss.any():
-                    kl_loss = loss_coeff_param.detach() * ((kl_old * need_loss).sum() / need_loss.sum())
-                else:
-                    self.second_loop_kl_exit_middle = True
-                    return kl_old, kl_loss
-            else:
-                kl_loss = loss_coeff_param.detach() * kl_loss
+        kl_loss = loss_coeff_param.detach() * kl_loss
 
         # If optimizing the log loss coeff, then
         # self._kl_loss_coeff_param is the "log loss coeff"
@@ -560,7 +544,6 @@ class Learner(Configurable):
         else:
             raise ValueError("Invalid kl_target_stat")
         # =====================================================================
-        self.second_loop_kl_exit_middle = False
         return kl_old, kl_loss
 
     def _entropy_exploration_loss(self, action_distribution, valids, num_invalids: int) -> Tensor:
@@ -756,7 +739,7 @@ class Learner(Configurable):
                 value_loss = 0.0
             # =====================================================================
             kl_old, kl_loss = self.kl_loss_func(
-                self.actor_critic.action_space, mb.action_logits, action_distribution, valids, num_invalids, use_pg_loss
+                self.actor_critic.action_space, mb.action_logits, action_distribution, valids, num_invalids
             )
 
         loss_summaries = dict(
@@ -796,25 +779,18 @@ class Learner(Configurable):
                 loss_summaries,
             ) = self._calculate_losses(mb, num_invalids, use_pg_loss)
 
-        if self.second_loop_kl_exit_middle:
-            return force_summaries, kl_old, num_sgd_steps, summaries_batch, kl_loss_coeff_opt, recent_kls, with_summaries, \
-                stats_and_summaries
-
         with timing.add_time("losses_postprocess"):
             # xPPO
             # =====================================================================
             # noinspection PyTypeChecker
-            if use_pg_loss:
-                actor_loss: Tensor = policy_loss + exploration_loss + kl_loss
-                critic_loss = value_loss
-                loss: Tensor = actor_loss + critic_loss
-                epoch_actor_losses[batch_num] = float(actor_loss)
-            else:
-                loss: Tensor = kl_loss
-                policy_loss = to_scalar(policy_loss)
-                value_loss = to_scalar(value_loss)
-                exploration_loss = to_scalar(exploration_loss)
-                epoch_actor_losses[batch_num] = to_scalar(kl_loss)
+            if not use_pg_loss:
+                policy_loss *= 0.0
+                value_loss *= 0.0
+                exploration_loss *= 0.0
+            actor_loss: Tensor = policy_loss + exploration_loss + kl_loss
+            critic_loss = value_loss
+            loss: Tensor = actor_loss + critic_loss
+            epoch_actor_losses[batch_num] = float(actor_loss)
             # =====================================================================
 
             high_loss = 30.0
@@ -943,7 +919,7 @@ class Learner(Configurable):
             self.target_kl = self.target_kl_copy
             self.MIN_KL_LOSS_COEFF = self.MIN_KL_LOSS_COEFF_COPY
 
-        self._kl_loss_coeff_param = torch.nn.Parameter(torch.tensor(1.0))
+        self._kl_loss_coeff_param = torch.nn.Parameter(torch.tensor(100.0))
         # TODO: SGD or Adam ?
         kl_loss_coeff_opt = torch.optim.SGD(
             [self._kl_loss_coeff_param],
@@ -987,7 +963,6 @@ class Learner(Configurable):
         # xPPO
         # =====================================================================
         self.second_penalty_loops = []
-        self.second_penalty_skip_ratio = []
         # =====================================================================
         for epoch in range(self.cfg.num_epochs):
             with timing.add_time("epoch_init"):
@@ -1016,52 +991,22 @@ class Learner(Configurable):
             # xPPO
             # =====================================================================
             penalty_loops = 0
-            if self.sparse_second_loop:
-                if self.env_steps > self.skip_beginning_steps:
-                    second_loop_count = 0
-                    while self._second_penalty_loop:
-                        if 0 < self.second_loop_max < second_loop_count:
-                            break
-                        skipped_minibatches = 0
-                        total_minibatches = 0
-                        minibatches = self._get_minibatches(batch_size, experience_size, shuffle_minibatches=True)
-                        for batch_num in range(len(minibatches)):
-                            total_minibatches += 1
-                            force_summaries, kl_old, num_sgd_steps, summaries_batch, kl_loss_coeff_opt, recent_kls, \
-                                with_summaries, stats_and_summaries = self._minibatch_step(
-                                    minibatches=minibatches, batch_num=summaries_batch, gpu_buffer=gpu_buffer,
-                                    num_invalids=num_invalids,
-                                    epoch_actor_losses=epoch_actor_losses, kl_loss_coeff_opt=kl_loss_coeff_opt,
-                                    num_sgd_steps=num_sgd_steps, recent_kls=recent_kls, use_pg_loss=False,
-                                    force_summaries=force_summaries, summaries_batch=summaries_batch,
-                                    summaries_epoch=summaries_epoch, with_summaries=with_summaries, timing=timing,
-                                    experience_size=experience_size, epoch=epoch, stats_and_summaries=stats_and_summaries)
-
-                            if (kl_old <= self.target_kl).all():
-                                skipped_minibatches += 1
-
-                        self.second_penalty_skip_ratio.append(skipped_minibatches / total_minibatches)
-                        penalty_loops += 1
-                        if skipped_minibatches == total_minibatches:
-                            break
-                        second_loop_count += 1
-            else:
-                while self._second_penalty_loop:
-                    if self._kl_target_stat == "mean":
-                        if kl_old.mean() <= self.target_kl:
-                            break
-                    elif self._kl_target_stat == "max":
-                        if kl_old.max() <= self.target_kl:
-                            break
-                    force_summaries, kl_old, num_sgd_steps, summaries_batch, kl_loss_coeff_opt, recent_kls, \
-                        with_summaries, stats_and_summaries = self._minibatch_step(
-                            minibatches=minibatches, batch_num=summaries_batch, gpu_buffer=gpu_buffer, num_invalids=num_invalids,
-                            epoch_actor_losses=epoch_actor_losses, kl_loss_coeff_opt=kl_loss_coeff_opt,
-                            num_sgd_steps=num_sgd_steps, recent_kls=recent_kls, use_pg_loss=False,
-                            force_summaries=force_summaries, summaries_batch=summaries_batch,
-                            summaries_epoch=summaries_epoch, with_summaries=with_summaries, timing=timing,
-                            experience_size=experience_size, epoch=epoch, stats_and_summaries=stats_and_summaries)
-                    penalty_loops += 1
+            while self._second_penalty_loop:
+                if self._kl_target_stat == "mean":
+                    if kl_old.mean() <= self.target_kl:
+                        break
+                elif self._kl_target_stat == "max":
+                    if kl_old.max() <= self.target_kl:
+                        break
+                force_summaries, kl_old, num_sgd_steps, summaries_batch, kl_loss_coeff_opt, recent_kls, \
+                    with_summaries, stats_and_summaries = self._minibatch_step(
+                        minibatches=minibatches, batch_num=summaries_batch, gpu_buffer=gpu_buffer, num_invalids=num_invalids,
+                        epoch_actor_losses=epoch_actor_losses, kl_loss_coeff_opt=kl_loss_coeff_opt,
+                        num_sgd_steps=num_sgd_steps, recent_kls=recent_kls, use_pg_loss=False,
+                        force_summaries=force_summaries, summaries_batch=summaries_batch,
+                        summaries_epoch=summaries_epoch, with_summaries=with_summaries, timing=timing,
+                        experience_size=experience_size, epoch=epoch, stats_and_summaries=stats_and_summaries)
+                penalty_loops += 1
             self.second_penalty_loops.append(penalty_loops)
             # =====================================================================
 
@@ -1092,10 +1037,6 @@ class Learner(Configurable):
                 stats_and_summaries.mean_second_penalty_loops = np.mean(self.second_penalty_loops)
                 stats_and_summaries.min_second_penalty_loops = np.min(self.second_penalty_loops)
                 stats_and_summaries.max_second_penalty_loops = np.max(self.second_penalty_loops)
-            if self.second_penalty_skip_ratio:
-                stats_and_summaries.mean_second_penalty_skip_ratio = np.mean(self.second_penalty_skip_ratio)
-                stats_and_summaries.max_second_penalty_skip_ratio = np.max(self.second_penalty_skip_ratio)
-                stats_and_summaries.min_second_penalty_skip_ratio = np.min(self.second_penalty_skip_ratio)
         # =====================================================================
         return stats_and_summaries
 
