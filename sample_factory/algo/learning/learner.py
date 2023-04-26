@@ -856,25 +856,25 @@ class Learner(Configurable):
             kl_loss_coeff_opt.step()
 
             if self._optimize_log_loss_coeff:
-                if self._kl_loss_coeff_param < 1 + self.MIN_KL_LOSS_COEFF:
+                if self._kl_loss_coeff_param.item() < 1 + self.MIN_KL_LOSS_COEFF:
                     with torch.no_grad():
                         self._kl_loss_coeff_param.copy_(torch.tensor(1 + self.MIN_KL_LOSS_COEFF))
-                    assert self._kl_loss_coeff_param >= 1 + self.MIN_KL_LOSS_COEFF
+                    assert self._kl_loss_coeff_param.item() >= 1 + self.MIN_KL_LOSS_COEFF
 
-                if self._kl_loss_coeff_param > self.MAX_KL_LOSS_COEFF:
+                if self._kl_loss_coeff_param.item() > self.MAX_KL_LOSS_COEFF:
                     with torch.no_grad():
                         self._kl_loss_coeff_param.copy_(torch.tensor(self.MAX_KL_LOSS_COEFF))
-                    assert self._kl_loss_coeff_param <= self.MAX_KL_LOSS_COEFF
+                    assert self._kl_loss_coeff_param.item() <= self.MAX_KL_LOSS_COEFF
             else:
-                if self._kl_loss_coeff_param < self.MIN_KL_LOSS_COEFF:
+                if self._kl_loss_coeff_param.item() < self.MIN_KL_LOSS_COEFF:
                     with torch.no_grad():
                         self._kl_loss_coeff_param.copy_(torch.tensor(self.MIN_KL_LOSS_COEFF))
-                    assert self._kl_loss_coeff_param >= self.MIN_KL_LOSS_COEFF
+                    assert self._kl_loss_coeff_param.item() >= self.MIN_KL_LOSS_COEFF
 
-                if self._kl_loss_coeff_param > self.MAX_KL_LOSS_COEFF:
+                if self._kl_loss_coeff_param.item() > self.MAX_KL_LOSS_COEFF:
                     with torch.no_grad():
                         self._kl_loss_coeff_param.copy_(torch.tensor(self.MAX_KL_LOSS_COEFF))
-                    assert self._kl_loss_coeff_param <= self.MAX_KL_LOSS_COEFF
+                    assert self._kl_loss_coeff_param.item() <= self.MAX_KL_LOSS_COEFF
 
             # =====================================================================
             num_sgd_steps += 1
