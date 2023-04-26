@@ -856,21 +856,23 @@ class Learner(Configurable):
             kl_loss_coeff_opt.step()
 
             if self._optimize_log_loss_coeff:
-                with torch.no_grad():
-                    if self._kl_loss_coeff_param.detach() < 1 + self.MIN_KL_LOSS_COEFF:
+                if self._kl_loss_coeff_param < 1 + self.MIN_KL_LOSS_COEFF:
+                    with torch.no_grad():
                         self._kl_loss_coeff_param.copy_(1 + self.MIN_KL_LOSS_COEFF)
                     assert self._kl_loss_coeff_param >= 1 + self.MIN_KL_LOSS_COEFF
 
-                    if self._kl_loss_coeff_param.detach() > self.MAX_KL_LOSS_COEFF:
+                if self._kl_loss_coeff_param > self.MAX_KL_LOSS_COEFF:
+                    with torch.no_grad():
                         self._kl_loss_coeff_param.copy_(self.MAX_KL_LOSS_COEFF)
                     assert self._kl_loss_coeff_param <= self.MAX_KL_LOSS_COEFF
             else:
-                with torch.no_grad():
-                    if self._kl_loss_coeff_param.detach() < self.MIN_KL_LOSS_COEFF:
+                if self._kl_loss_coeff_param < self.MIN_KL_LOSS_COEFF:
+                    with torch.no_grad():
                         self._kl_loss_coeff_param.copy_(self.MIN_KL_LOSS_COEFF)
                     assert self._kl_loss_coeff_param >= self.MIN_KL_LOSS_COEFF
 
-                    if self._kl_loss_coeff_param.detach() > self.MAX_KL_LOSS_COEFF:
+                if self._kl_loss_coeff_param > self.MAX_KL_LOSS_COEFF:
+                    with torch.no_grad():
                         self._kl_loss_coeff_param.copy_(self.MAX_KL_LOSS_COEFF)
                     assert self._kl_loss_coeff_param <= self.MAX_KL_LOSS_COEFF
 
