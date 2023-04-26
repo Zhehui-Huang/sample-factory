@@ -745,15 +745,15 @@ class Learner(Configurable):
             # noinspection PyTypeChecker
             # xPPO
             # =====================================================================
-            if use_pg_loss:
-                policy_loss = self._policy_loss(ratio, adv, valids, num_invalids)
-                exploration_loss = self.exploration_loss_func(action_distribution, valids, num_invalids)
-                old_values = mb["values"]
-                value_loss = self._value_loss(values, old_values, targets, clip_value, valids, num_invalids)
-            else:
-                policy_loss = 0.0
-                exploration_loss = 0.0
-                value_loss = 0.0
+            # if use_pg_loss:
+            policy_loss = self._policy_loss(ratio, adv, valids, num_invalids)
+            exploration_loss = self.exploration_loss_func(action_distribution, valids, num_invalids)
+            old_values = mb["values"]
+            value_loss = self._value_loss(values, old_values, targets, clip_value, valids, num_invalids)
+            if not use_pg_loss:
+                policy_loss = 0.0 * policy_loss
+                exploration_loss = 0.0 * exploration_loss
+                value_loss = 0.0 * value_loss
             # =====================================================================
             kl_old, kl_loss = self.kl_loss_func(
                 self.actor_critic.action_space, mb.action_logits, action_distribution, valids, num_invalids, use_pg_loss
@@ -804,17 +804,17 @@ class Learner(Configurable):
             # xPPO
             # =====================================================================
             # noinspection PyTypeChecker
-            if use_pg_loss:
-                actor_loss: Tensor = policy_loss + exploration_loss + kl_loss
-                critic_loss = value_loss
-                loss: Tensor = actor_loss + critic_loss
-                epoch_actor_losses[batch_num] = float(actor_loss)
-            else:
-                loss: Tensor = kl_loss
-                policy_loss = to_scalar(policy_loss)
-                value_loss = to_scalar(value_loss)
-                exploration_loss = to_scalar(exploration_loss)
-                epoch_actor_losses[batch_num] = to_scalar(kl_loss)
+            # if use_pg_loss:
+            actor_loss: Tensor = policy_loss + exploration_loss + kl_loss
+            critic_loss = value_loss
+            loss: Tensor = actor_loss + critic_loss
+            epoch_actor_losses[batch_num] = float(actor_loss)
+            # else:
+            #     loss: Tensor = kl_loss
+            #     policy_loss = to_scalar(policy_loss)
+            #     value_loss = to_scalar(value_loss)
+            #     exploration_loss = to_scalar(exploration_loss)
+            #     epoch_actor_losses[batch_num] = to_scalar(kl_loss)
             # =====================================================================
 
             high_loss = 30.0
