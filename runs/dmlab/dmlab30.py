@@ -7,7 +7,7 @@ _params = ParamGrid([
 ])
 
 DMLAB30_CLI = DMLAB30_BASELINE_CLI + (
-    ' --target_kl=0.001 --kl_loss_coeff_lr=0.1 --MIN_KL_LOSS_COEFF=0.001 --start_kl_steps=0 '
+    ' --target_kl=0.01 --kl_loss_coeff_lr=0.1 --MIN_KL_LOSS_COEFF=0.001 --start_kl_steps=0 '
     '--with_wandb=True --wandb_project=stabilized-rl --wandb_group=dmlab_sf_xppo_minibatch --wandb_user=resl-mixppo'
 )
 
