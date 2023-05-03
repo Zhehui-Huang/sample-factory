@@ -531,7 +531,10 @@ class Learner(Configurable):
         else:
             loss_coeff_param = self._kl_loss_coeff_param
 
-        kl_loss = loss_coeff_param.detach() * kl_loss
+        need_loss = (kl_loss > self.target_kl)
+        if need_loss.any():
+            kl_loss = loss_coeff_param.detach() * ((kl_loss * need_loss).sum() / need_loss.sum())
+        # kl_loss = loss_coeff_param.detach() * kl_loss
 
         # If optimizing the log loss coeff, then
         # self._kl_loss_coeff_param is the "log loss coeff"
