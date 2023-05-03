@@ -199,7 +199,13 @@ class Learner(Configurable):
 
         # xPPO
         # =====================================================================
-        self._kl_loss_coeff_param = torch.nn.Parameter(torch.tensor(1.0))
+        self._kl_loss_coeff_param = torch.nn.Parameter(torch.tensor(1000.0))
+        self.kl_loss_coeff_opt = torch.optim.Adam(
+            [self._kl_loss_coeff_param],
+            lr=3.0,
+            betas=(self.cfg.adam_beta1, self.cfg.adam_beta2),
+            eps=self.cfg.adam_eps,
+        )
         self._kl_loss_coeff_momentum = cfg.kl_loss_coeff_momentum
         self._use_minibatch_kl_penalty = True
         self._optimize_log_loss_coeff = False
@@ -288,10 +294,6 @@ class Learner(Configurable):
             eps=self.cfg.adam_eps,
         )
 
-        # xPPO
-        # =====================================================================
-        self._initial_policy_opt_state_dict = self.optimizer.state_dict()
-        # =====================================================================
 
         self.load_from_checkpoint(self.policy_id)
         self.param_server.init(self.actor_critic, self.train_step, self.device)
@@ -921,13 +923,6 @@ class Learner(Configurable):
             self.target_kl = self.target_kl_copy
             self.MIN_KL_LOSS_COEFF = self.MIN_KL_LOSS_COEFF_COPY
 
-        self._kl_loss_coeff_param = torch.nn.Parameter(torch.tensor(1.0))
-        # TODO: SGD or Adam ?
-        kl_loss_coeff_opt = torch.optim.SGD(
-            [self._kl_loss_coeff_param],
-            lr=self._kl_loss_coeff_lr,
-            momentum=self._kl_loss_coeff_momentum,
-        )
         # =====================================================================
 
         with torch.no_grad():
@@ -975,10 +970,6 @@ class Learner(Configurable):
                 minibatches = self._get_minibatches(batch_size, experience_size, shuffle_minibatches=False)
 
             kl_old = None
-            if self._reset_policy_optimizer:
-                self.optimizer.load_state_dict(
-                    self._initial_policy_opt_state_dict
-                )
             for batch_num in range(len(minibatches)):
                 force_summaries, kl_old, num_sgd_steps, summaries_batch, kl_loss_coeff_opt, recent_kls, with_summaries,\
                     stats_and_summaries = \
