@@ -531,9 +531,9 @@ class Learner(Configurable):
         else:
             loss_coeff_param = self._kl_loss_coeff_param
 
-        need_loss = (kl_loss > self.target_kl)
+        need_loss = (kl_old > self.target_kl)
         if need_loss.any():
-            kl_loss = loss_coeff_param.detach() * ((kl_loss * need_loss).sum() / need_loss.sum())
+            kl_loss = loss_coeff_param.detach() * ((kl_old * need_loss).sum() / need_loss.sum())
         # kl_loss = loss_coeff_param.detach() * kl_loss
 
         # If optimizing the log loss coeff, then
@@ -759,7 +759,7 @@ class Learner(Configurable):
 
         return action_distribution, policy_loss, exploration_loss, kl_old, kl_loss, value_loss, loss_summaries
 
-    def _minibatch_step(self, minibatches, batch_num, gpu_buffer, num_invalids, epoch_actor_losses, kl_loss_coeff_opt,
+    def _minibatch_step(self, minibatches, batch_num, gpu_buffer, num_invalids, epoch_actor_losses,
                         num_sgd_steps, recent_kls, use_pg_loss, force_summaries, summaries_batch, summaries_epoch,
                         with_summaries, timing, experience_size, epoch, stats_and_summaries):
         with torch.no_grad(), timing.add_time("minibatch_init"):
@@ -832,7 +832,7 @@ class Learner(Configurable):
         with timing.add_time("update"):
             # xPPO
             # =====================================================================
-            kl_loss_coeff_opt.zero_grad()
+            self.kl_loss_coeff_opt.zero_grad()
             # =====================================================================
             # following advice from https://youtu.be/9mS1fIYj1So set grad to None instead of optimizer.zero_grad()
             for p in self.actor_critic.parameters():
@@ -858,7 +858,7 @@ class Learner(Configurable):
                 self.optimizer.step()
             # xPPO
             # =====================================================================
-            kl_loss_coeff_opt.step()
+            self.kl_loss_coeff_opt.step()
 
             if self._optimize_log_loss_coeff:
                 if self._kl_loss_coeff_param.item() < 1 + self.MIN_KL_LOSS_COEFF:
@@ -907,7 +907,7 @@ class Learner(Configurable):
                 # this will force policy update on the inference worker (policy worker)
                 self.policy_versions_tensor[self.policy_id] = self.train_step
 
-        return force_summaries, kl_old, num_sgd_steps, summaries_batch, kl_loss_coeff_opt, recent_kls, with_summaries, \
+        return force_summaries, kl_old, num_sgd_steps, summaries_batch, recent_kls, with_summaries, \
             stats_and_summaries
 
     def _train(
@@ -974,12 +974,11 @@ class Learner(Configurable):
 
             kl_old = None
             for batch_num in range(len(minibatches)):
-                force_summaries, kl_old, num_sgd_steps, summaries_batch, kl_loss_coeff_opt, recent_kls, with_summaries,\
+                force_summaries, kl_old, num_sgd_steps, summaries_batch, recent_kls, with_summaries,\
                     stats_and_summaries = \
                     self._minibatch_step(
                         minibatches=minibatches, batch_num=batch_num, gpu_buffer=gpu_buffer, num_invalids=num_invalids,
-                        epoch_actor_losses=epoch_actor_losses, kl_loss_coeff_opt=kl_loss_coeff_opt,
-                        num_sgd_steps=num_sgd_steps, recent_kls=recent_kls, use_pg_loss=True,
+                        epoch_actor_losses=epoch_actor_losses, num_sgd_steps=num_sgd_steps, recent_kls=recent_kls, use_pg_loss=True,
                         force_summaries=force_summaries, summaries_batch=summaries_batch,
                         summaries_epoch=summaries_epoch, with_summaries=with_summaries, timing=timing,
                         experience_size=experience_size, epoch=epoch, stats_and_summaries=stats_and_summaries)
@@ -994,10 +993,10 @@ class Learner(Configurable):
                 elif self._kl_target_stat == "max":
                     if kl_old.max() <= self.target_kl:
                         break
-                force_summaries, kl_old, num_sgd_steps, summaries_batch, kl_loss_coeff_opt, recent_kls, \
+                force_summaries, kl_old, num_sgd_steps, summaries_batch, recent_kls, \
                     with_summaries, stats_and_summaries = self._minibatch_step(
                         minibatches=minibatches, batch_num=summaries_batch, gpu_buffer=gpu_buffer, num_invalids=num_invalids,
-                        epoch_actor_losses=epoch_actor_losses, kl_loss_coeff_opt=kl_loss_coeff_opt,
+                        epoch_actor_losses=epoch_actor_losses,
                         num_sgd_steps=num_sgd_steps, recent_kls=recent_kls, use_pg_loss=False,
                         force_summaries=force_summaries, summaries_batch=summaries_batch,
                         summaries_epoch=summaries_epoch, with_summaries=with_summaries, timing=timing,
