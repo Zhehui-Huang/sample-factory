@@ -785,7 +785,7 @@ class Learner(Configurable):
             # noinspection PyTypeChecker
             if not use_pg_loss:
                 policy_loss *= 0.0
-                value_loss *= 0.0
+                # value_loss *= 0.0
                 exploration_loss *= 0.0
             actor_loss: Tensor = policy_loss + exploration_loss + kl_loss
             critic_loss = value_loss
