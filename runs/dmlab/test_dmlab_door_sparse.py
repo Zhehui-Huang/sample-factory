@@ -6,7 +6,7 @@ _params = ParamGrid([
 ])
 
 DMLAB30_CLI = DMLAB30_BASELINE_CLI + (
-    ' ----num_workers=30 --dmlab_one_task_per_worker=False --env=dmlab_sparse_doors --with_wandb=True --wandb_project=stabilized-rl '
+    ' --num_workers=30 --dmlab_one_task_per_worker=False --env=dmlab_sparse_doors --with_wandb=True --wandb_project=stabilized-rl '
     '--wandb_group=test_dmlab_door_sparse --wandb_user=resl-mixppo'
 )
 
