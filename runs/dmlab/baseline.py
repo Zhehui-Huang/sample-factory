@@ -1,5 +1,5 @@
 DMLAB30_BASELINE_CLI = (
-    'python -m sf_examples.dmlab.train_dmlab --env=dmlab_30 --train_for_env_steps=5000000000 --gamma=0.99 '
+    'python -m sf_examples.dmlab.train_dmlab --env=dmlab_30 --train_for_env_steps=1000000000 --gamma=0.99 '
     '--use_rnn=True --num_workers=60 --num_envs_per_worker=12 --num_epochs=1 --rollout=32 --recurrence=32 '
     '--batch_size=2048 --benchmark=False --max_grad_norm=0.0 --dmlab_renderer=software '
     '--decorrelate_experience_max_seconds=120 --encoder_conv_architecture=resnet_impala '
