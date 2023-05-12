@@ -52,6 +52,23 @@ DMLAB_ENVS = [
     DmLabSpec("dmlab_watermaze", "contributed/dmlab30/rooms_watermaze"),
     DmLabSpec("dmlab_collect_good_objects", "contributed/dmlab30/rooms_collect_good_objects_train"),
     DmLabSpec("dmlab_rooms_exploit_deferred_effects", "contributed/dmlab30/rooms_exploit_deferred_effects_train"),
+
+    # Added env
+    DmLabSpec("dmlab_lasertag_one_opponent_small", "contributed/dmlab30/lasertag_one_opponent_small"),
+    DmLabSpec("dmlab_lasertag_three_opponents_small", "contributed/dmlab30/lasertag_three_opponents_small"),
+    DmLabSpec("dmlab_lasertag_one_opponent_large", "contributed/dmlab30/lasertag_one_opponent_large"),
+    DmLabSpec("dmlab_lasertag_three_opponents_large", "contributed/dmlab30/lasertag_three_opponents_large"),
+
+    DmLabSpec("dmlab_skymaze_irreversible_path_hard", "contributed/dmlab30/skymaze_irreversible_path_hard"),
+    DmLabSpec("dmlab_skymaze_irreversible_path_varied", "contributed/dmlab30/skymaze_irreversible_path_varied"),
+    DmLabSpec("dmlab_explore_object_locations_small", "contributed/dmlab30/explore_object_locations_small"),
+    DmLabSpec("dmlab_explore_object_locations_large", "contributed/dmlab30/explore_object_locations_large"),
+
+    DmLabSpec("dmlab_explore_obstructed_goals_small", "contributed/dmlab30/explore_obstructed_goals_small"),
+    DmLabSpec("dmlab_explore_goal_locations_small", "contributed/dmlab30/explore_goal_locations_small"),
+    DmLabSpec("dmlab_explore_object_rewards_few", "contributed/dmlab30/explore_object_rewards_few"),
+    DmLabSpec("dmlab_explore_object_rewards_many", "contributed/dmlab30/explore_object_rewards_many"),
+
 ]
 
 
