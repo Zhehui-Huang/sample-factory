@@ -84,7 +84,7 @@ def make_plot(env):
         dmlab_xppo_dict[env]: "FixPO",
         dmlab_appo_dict[env]: "APPO",
         "global_step": "Total Environment Steps",
-        "reward/reward": "reward/reward",
+        "reward/reward": "Average Episode Reward",
         "group": "Algorithm",
     }
     all_data = load_groups(
@@ -109,7 +109,7 @@ def main():
         sns.lineplot(
             data=all_data,
             x="Total Environment Steps",
-            y="reward/reward",
+            y="Average Episode Reward",
             hue="Algorithm",
             errorbar=('ci', 95),
             style="Algorithm",
