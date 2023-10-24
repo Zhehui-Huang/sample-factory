@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import glob
 import os
 import time
@@ -199,24 +200,19 @@ class Learner(Configurable):
 
         # xPPO
         # =====================================================================
-        self._kl_loss_coeff_param = torch.nn.Parameter(torch.tensor(1.0))
-        self._kl_loss_coeff_momentum = cfg.kl_loss_coeff_momentum
-        self._use_minibatch_kl_penalty = True
-        self._optimize_log_loss_coeff = False
-        self._initial_policy_opt_state_dict = None
+        self._beta = torch.nn.Parameter(torch.tensor(cfg.init_beta))
         self._kl_target_stat = "max"
-        self._second_penalty_loop = True
-        self._kl_loss_coeff_lr = cfg.kl_loss_coeff_lr
-        self.target_kl = cfg.target_kl
-        self.MIN_KL_LOSS_COEFF = cfg.MIN_KL_LOSS_COEFF
-        self.MAX_KL_LOSS_COEFF = cfg.MAX_KL_LOSS_COEFF
+        self._beta_lr = cfg.beta_lr
+        self._eps_kl = cfg.eps_kl
         self.second_penalty_loops = []
-        self.target_coeff = cfg.target_coeff
-
-        # TODO: SGD or Adam ?
-        self.kl_loss_coeff_opt = torch.optim.Adam(
-            [self._kl_loss_coeff_param],
-            lr=self._kl_loss_coeff_lr,
+        self._target_coeff = cfg.target_coeff
+        self.beta_losses = []
+        self._fixup_batchsize = cfg.fixup_batchsize
+        self._fixup_every_repeat = cfg.fixup_every_repeat
+        self._fixup_loop = cfg.fixup_loop
+        self._beta_optim = torch.optim.Adam(
+            [self._beta],
+            lr=self._beta_lr,
         )
 
         # =====================================================================
@@ -279,11 +275,6 @@ class Learner(Configurable):
             betas=(self.cfg.adam_beta1, self.cfg.adam_beta2),
             eps=self.cfg.adam_eps,
         )
-
-        # xPPO
-        # =====================================================================
-        self._initial_policy_opt_state_dict = self.optimizer.state_dict()
-        # =====================================================================
 
         self.load_from_checkpoint(self.policy_id)
         self.param_server.init(self.actor_critic, self.train_step, self.device)
@@ -507,21 +498,38 @@ class Learner(Configurable):
         old_action_distribution = get_action_distribution(action_space, action_logits)
         kl_old = action_distribution.kl_divergence(old_action_distribution)
         kl_old = masked_select(kl_old, valids, num_invalids)
+        kl_loss = kl_old.mean()
 
-        # If optimizing the log loss coeff, then
-        # self._kl_loss_coeff_param is the "log loss coeff"
-        if self._kl_target_stat == "mean":
-            kl_loss = self._kl_loss_coeff_param * (
-                    self.target_kl - self.target_coeff * kl_old.mean().detach()
-            )
-        elif self._kl_target_stat == "max":
-            kl_loss = self._kl_loss_coeff_param * (
-                    self.target_kl - self.target_coeff * kl_old.max().detach()
-            )
-        else:
-            raise ValueError("Invalid kl_target_stat")
-        # =====================================================================
+        kl_loss *= self._beta.detach()
+
         return kl_old, kl_loss
+
+    def _optimize_beta(self, kl_div: torch.Tensor):
+        self._beta_optim.zero_grad()
+        if self._kl_target_stat == "max":
+            beta_loss = self._beta * (self._eps_kl - self._target_coeff * kl_div.detach().max())
+        elif self._kl_target_stat == "mean":
+            beta_loss = self._beta * (self._eps_kl - self._target_coeff * kl_div.detach().mean())
+        else:
+            raise ValueError("Unknown kl_target_stat", self._kl_target_stat)
+
+        # This backward pass only affects self._beta
+        beta_loss.backward()
+        self._beta_optim.step()
+        print('inside: ', self._beta.detach())
+        if self._beta < 0:
+            with torch.no_grad():
+                self._beta.copy_(0.0)
+
+        return beta_loss.item()
+
+    def _violates_constraint(self, kl_div: torch.Tensor):
+        if self._kl_target_stat == "max":
+            return (kl_div > self._eps_kl).any()
+        elif self._kl_target_stat == "mean":
+            return kl_div.mean() > self._eps_kl
+        else:
+            raise ValueError("Unknown kl_target_stat", self._kl_target_stat)
 
     def _entropy_exploration_loss(self, action_distribution, valids, num_invalids: int) -> Tensor:
         entropy = action_distribution.entropy()
@@ -798,10 +806,6 @@ class Learner(Configurable):
 
         # update the weights
         with timing.add_time("update"):
-            # xPPO
-            # =====================================================================
-            self.kl_loss_coeff_opt.zero_grad()
-            # =====================================================================
             # following advice from https://youtu.be/9mS1fIYj1So set grad to None instead of optimizer.zero_grad()
             for p in self.actor_critic.parameters():
                 p.grad = None
@@ -824,32 +828,7 @@ class Learner(Configurable):
 
             with self.param_server.policy_lock:
                 self.optimizer.step()
-            # xPPO
-            # =====================================================================
-            self.kl_loss_coeff_opt.step()
 
-            if self._optimize_log_loss_coeff:
-                if self._kl_loss_coeff_param.item() < 1 + self.MIN_KL_LOSS_COEFF:
-                    with torch.no_grad():
-                        self._kl_loss_coeff_param.copy_(torch.tensor(1 + self.MIN_KL_LOSS_COEFF))
-                    assert self._kl_loss_coeff_param.item() >= 1 + self.MIN_KL_LOSS_COEFF
-
-                if self._kl_loss_coeff_param.item() > self.MAX_KL_LOSS_COEFF:
-                    with torch.no_grad():
-                        self._kl_loss_coeff_param.copy_(torch.tensor(self.MAX_KL_LOSS_COEFF))
-                    assert self._kl_loss_coeff_param.item() <= self.MAX_KL_LOSS_COEFF
-            else:
-                if self._kl_loss_coeff_param.item() < self.MIN_KL_LOSS_COEFF:
-                    with torch.no_grad():
-                        self._kl_loss_coeff_param.copy_(torch.tensor(self.MIN_KL_LOSS_COEFF))
-                    assert self._kl_loss_coeff_param.item() >= self.MIN_KL_LOSS_COEFF
-
-                if self._kl_loss_coeff_param.item() > self.MAX_KL_LOSS_COEFF:
-                    with torch.no_grad():
-                        self._kl_loss_coeff_param.copy_(torch.tensor(self.MAX_KL_LOSS_COEFF))
-                    assert self._kl_loss_coeff_param.item() <= self.MAX_KL_LOSS_COEFF
-
-            # =====================================================================
             num_sgd_steps += 1
 
         if use_pg_loss:
@@ -875,6 +854,7 @@ class Learner(Configurable):
                 # this will force policy update on the inference worker (policy worker)
                 self.policy_versions_tensor[self.policy_id] = self.train_step
 
+        self.beta_losses.append(self._optimize_beta(kl_div=kl_old))
         return force_summaries, kl_old, num_sgd_steps, summaries_batch, recent_kls, with_summaries, \
             stats_and_summaries, kl_loss
 
@@ -882,6 +862,8 @@ class Learner(Configurable):
         self, gpu_buffer: TensorDict, batch_size: int, experience_size: int, num_invalids: int
     ) -> Optional[AttrDict]:
         timing = self.timing
+        self.beta_losses = []
+        fixup_grad_steps = 0
         with torch.no_grad():
             early_stopping_tolerance = 1e-6
             early_stop = False
@@ -926,7 +908,6 @@ class Learner(Configurable):
                 force_summaries = False
                 minibatches = self._get_minibatches(batch_size, experience_size, shuffle_minibatches=False)
 
-            kl_old = None
             for batch_num in range(len(minibatches)):
                 force_summaries, kl_old, num_sgd_steps, summaries_batch, recent_kls, with_summaries,\
                     stats_and_summaries, kl_loss = \
@@ -941,39 +922,47 @@ class Learner(Configurable):
             # xPPO
             # =====================================================================
             penalty_loops = 0
-            while self._second_penalty_loop:
-                fixed = True
-                for batch_num in range(len(minibatches)):
-                    with torch.no_grad():
-                        indices = minibatches[batch_num]
-                        mb = self._get_minibatch(gpu_buffer, indices)
-                        mb = AttrDict(mb)
-                        old_action_distribution = get_action_distribution(self.actor_critic.action_space, mb.action_logits)
-                        action_distribution = self.actor_critic.action_distribution()
-                        kl_old = action_distribution.kl_divergence(old_action_distribution)
+            if self._fixup_loop and (self._fixup_every_repeat or epoch + 1 == self.cfg.num_epochs):
+                while True:  # until constraint satisfied
+                    constraint_satisfied = True
+                    if penalty_loops > 50000:
+                        break
+                    for batch_num in range(len(minibatches)):
+                        with torch.no_grad():
+                            indices = minibatches[batch_num]
+                            mb = self._get_minibatch(gpu_buffer, indices)
+                            mb = AttrDict(mb)
+                            old_action_distribution = get_action_distribution(self.actor_critic.action_space,
+                                                                              mb.action_logits)
+                            action_distribution = self.actor_critic.action_distribution()
+                            kl_old = action_distribution.kl_divergence(old_action_distribution)
+                            kl_old = masked_select(kl_old, mb.valids, num_invalids)
 
-                    if self._kl_target_stat == "mean":
-                        if kl_old.mean() <= self.target_kl:
-                            continue
-                    elif self._kl_target_stat == "max":
-                        if kl_old.max() <= self.target_kl:
-                            continue
+                        if self._violates_constraint(kl_div=kl_old):
+                            print("kl_div max: ", kl_old.max())
+                            print("_eps_kl: ", self._eps_kl)
+                            print('beta:, ', self._beta.detach())
+                            constraint_satisfied = False
+                            fixup_grad_steps += 1
 
-                    fixed = False
-                    force_summaries, kl_old, num_sgd_steps, summaries_batch, recent_kls, with_summaries, \
-                        stats_and_summaries, kl_loss = \
-                        self._minibatch_step(
-                            minibatches=minibatches, batch_num=batch_num, gpu_buffer=gpu_buffer,
-                            num_invalids=num_invalids,
-                            epoch_actor_losses=epoch_actor_losses, num_sgd_steps=num_sgd_steps, recent_kls=recent_kls,
-                            use_pg_loss=False,
-                            force_summaries=force_summaries, summaries_batch=summaries_batch,
-                            summaries_epoch=summaries_epoch, with_summaries=with_summaries, timing=timing,
-                            experience_size=experience_size, epoch=epoch, stats_and_summaries=stats_and_summaries)
-                if fixed:
-                    break
+                            force_summaries, kl_old, num_sgd_steps, summaries_batch, recent_kls, with_summaries, \
+                                stats_and_summaries, kl_loss = \
+                                self._minibatch_step(
+                                    minibatches=minibatches, batch_num=batch_num, gpu_buffer=gpu_buffer,
+                                    num_invalids=num_invalids,
+                                    epoch_actor_losses=epoch_actor_losses, num_sgd_steps=num_sgd_steps,
+                                    recent_kls=recent_kls,
+                                    use_pg_loss=False,
+                                    force_summaries=force_summaries, summaries_batch=summaries_batch,
+                                    summaries_epoch=summaries_epoch, with_summaries=with_summaries, timing=timing,
+                                    experience_size=experience_size, epoch=epoch, stats_and_summaries=stats_and_summaries)
+                    if constraint_satisfied:
+                        print('====================================================================================')
+                        print('finally out: ', penalty_loops)
+                        print('====================================================================================')
+                        break
 
-                penalty_loops += 1
+                    penalty_loops += 1
             self.second_penalty_loops.append(penalty_loops)
             # =====================================================================
 
@@ -998,12 +987,13 @@ class Learner(Configurable):
         # xPPO
         # =====================================================================
         if stats_and_summaries is not None:
-            stats_and_summaries._kl_loss_coeff_param = self._kl_loss_coeff_param.detach()
+            stats_and_summaries._beta = self._beta.detach()
             if self.second_penalty_loops:
                 stats_and_summaries.final_second_penalty_loops = self.second_penalty_loops[-1]
                 stats_and_summaries.mean_second_penalty_loops = np.mean(self.second_penalty_loops)
                 stats_and_summaries.min_second_penalty_loops = np.min(self.second_penalty_loops)
                 stats_and_summaries.max_second_penalty_loops = np.max(self.second_penalty_loops)
+                stats_and_summaries.fixup_grad_steps = fixup_grad_steps
         # =====================================================================
         return stats_and_summaries
 

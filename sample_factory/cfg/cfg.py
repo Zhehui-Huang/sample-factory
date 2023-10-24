@@ -219,34 +219,39 @@ def add_rl_args(p: ArgumentParser):
 
 
     p.add_argument(
-        "--kl_loss_coeff_momentum",
-        default=0.999,
-        type=float,
-    )
-    p.add_argument(
-        "--kl_loss_coeff_lr",
+        "--beta_lr",
         default=0.1,
         type=float,
     )
     p.add_argument(
-        "--target_kl",
-        default=0.1,
-        type=float,
-    )
-    p.add_argument(
-        "--MIN_KL_LOSS_COEFF",
-        default=0.001,
-        type=float,
-    )
-    p.add_argument(
-        "--MAX_KL_LOSS_COEFF",
-        default=1000.0,
+        "--eps_kl",
+        default=0.2,
         type=float,
     )
     p.add_argument(
         "--target_coeff",
+        default=2.0,
+        type=float,
+    )
+    p.add_argument(
+        "--init_beta",
         default=1.0,
         type=float,
+    )
+    p.add_argument(
+        "--fixup_batchsize",
+        default=1024,
+        type=int,
+    )
+    p.add_argument(
+        "--fixup_every_repeat",
+        default=True,
+        type=str2bool,
+    )
+    p.add_argument(
+        "--fixup_loop",
+        default=True,
+        type=str2bool,
     )
 
     p.add_argument(
