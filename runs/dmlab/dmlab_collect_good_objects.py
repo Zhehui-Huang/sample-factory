@@ -4,6 +4,7 @@ from runs.dmlab.baseline import DMLAB30_BASELINE_CLI
 _params = ParamGrid([
     ('seed', [0000, 1111, 2222, 3333]),
     ('lock_beta_optim', [True, False]),
+    ('batch_size', [1024]),
 ])
 
 DMLAB30_CLI = DMLAB30_BASELINE_CLI + (
