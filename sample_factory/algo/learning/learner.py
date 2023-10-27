@@ -516,7 +516,8 @@ class Learner(Configurable):
         # This backward pass only affects self._beta
         beta_loss.backward()
         self._beta_optim.step()
-        print('inside: ', self._beta.detach())
+        print('kl_div.detach().max(): ', kl_div.detach().max())
+        kl_div.detach().max()
         if self._beta < 0:
             with torch.no_grad():
                 self._beta.copy_(0.0)
@@ -804,6 +805,14 @@ class Learner(Configurable):
             if kl_old.numel() > 0 and kl_old.max().item() > 100:
                 log.warning(f"KL-divergence is very high: {kl_old.max().item():.4f}")
 
+        with torch.no_grad():
+            if not self._violates_constraint(kl_div=kl_old):
+                # print("kl_div max: ", kl_old.detach().max())
+                return force_summaries, kl_old, num_sgd_steps, summaries_batch, recent_kls, with_summaries, \
+                    stats_and_summaries, kl_loss
+            else:
+                print("kl_div max: ", kl_old.detach().max())
+
         # update the weights
         with timing.add_time("update"):
             # following advice from https://youtu.be/9mS1fIYj1So set grad to None instead of optimizer.zero_grad()
@@ -928,22 +937,22 @@ class Learner(Configurable):
                     if penalty_loops > 50000:
                         break
                     for batch_num in range(len(minibatches)):
-                        with torch.no_grad():
-                            indices = minibatches[batch_num]
-                            mb = self._get_minibatch(gpu_buffer, indices)
-                            mb = AttrDict(mb)
-                            old_action_distribution = get_action_distribution(self.actor_critic.action_space,
-                                                                              mb.action_logits)
-                            action_distribution = self.actor_critic.action_distribution()
-                            kl_old = action_distribution.kl_divergence(old_action_distribution)
-                            kl_old = masked_select(kl_old, mb.valids, num_invalids)
+                        # with torch.no_grad():
+                            # indices = minibatches[batch_num]
+                            # mb = self._get_minibatch(gpu_buffer, indices)
+                            # mb = AttrDict(mb)
+                            # old_action_distribution = get_action_distribution(self.actor_critic.action_space,
+                            #                                                   mb.action_logits)
+                            # action_distribution = self.actor_critic.action_distribution()
+                            # kl_old = action_distribution.kl_divergence(old_action_distribution)
+                            # kl_old = masked_select(kl_old, mb.valids, num_invalids)
 
-                        if self._violates_constraint(kl_div=kl_old):
-                            print("kl_div max: ", kl_old.max())
-                            print("_eps_kl: ", self._eps_kl)
-                            print('beta:, ', self._beta.detach())
-                            constraint_satisfied = False
-                            fixup_grad_steps += 1
+                        # if self._violates_constraint(kl_div=kl_old):
+                        #     print("kl_div max: ", kl_old.detach().max())
+                        #     print("_eps_kl: ", self._eps_kl)
+                        #     print('beta:, ', self._beta.detach())
+                        #     constraint_satisfied = False
+                        #     fixup_grad_steps += 1
 
                             force_summaries, kl_old, num_sgd_steps, summaries_batch, recent_kls, with_summaries, \
                                 stats_and_summaries, kl_loss = \
