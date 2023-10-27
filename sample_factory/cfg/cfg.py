@@ -217,6 +217,41 @@ def add_rl_args(p: ArgumentParser):
         "Highly recommended for environments with continuous action spaces.",
     )
     p.add_argument(
+        "--beta_lr",
+        default=0.1,
+        type=float,
+    )
+    p.add_argument(
+        "--eps_kl",
+        default=0.2,
+        type=float,
+    )
+    p.add_argument(
+        "--target_coeff",
+        default=2.0,
+        type=float,
+    )
+    p.add_argument(
+        "--init_beta",
+        default=1.0,
+        type=float,
+    )
+    p.add_argument(
+        "--fixup_batchsize",
+        default=1024,
+        type=int,
+    )
+    p.add_argument(
+        "--fixup_every_repeat",
+        default=True,
+        type=str2bool,
+    )
+    p.add_argument(
+        "--fixup_loop",
+        default=True,
+        type=str2bool,
+    )
+    p.add_argument(
         "--exploration_loss",
         default="entropy",
         type=str,
