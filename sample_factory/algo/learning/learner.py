@@ -190,6 +190,11 @@ class Learner(Configurable):
             [self._beta],
             lr=self._beta_lr,
         )
+        self.lock_beta_optim = cfg.lock_beta_optim
+        if self.lock_beta_optim:
+            beta_policy_id = 0
+            beta_policy_versions = torch.zeros([cfg.num_policies], dtype=torch.int32)
+            self.beta_param_server = ParameterServer(beta_policy_id, beta_policy_versions, cfg.serial_mode)
 
     def init(self) -> InitModelData:
         if self.cfg.exploration_loss_coeff == 0.0:
@@ -260,6 +265,8 @@ class Learner(Configurable):
 
         self.load_from_checkpoint(self.policy_id)
         self.param_server.init(self.actor_critic, self.train_step, self.device)
+        if self.lock_beta_optim:
+            self.beta_param_server.init(self._beta_optim, self.train_step, self.device)
         self.policy_versions_tensor[self.policy_id] = self.train_step
 
         self.lr_scheduler = get_lr_scheduler(self.cfg)
@@ -428,8 +435,12 @@ class Learner(Configurable):
     def _maybe_load_policy(self) -> None:
         if self.policy_to_load is not None:
             with self.param_server.policy_lock:
-                # don't re-load progress if we are loading from another policy checkpoint
-                self.load_from_checkpoint(self.policy_to_load, load_progress=False)
+                if self.lock_beta_optim:
+                    with self.beta_param_server.policy_lock:
+                        # don't re-load progress if we are loading from another policy checkpoint
+                        self.load_from_checkpoint(self.policy_to_load, load_progress=False)
+                else:
+                    self.load_from_checkpoint(self.policy_to_load, load_progress=False)
 
             # make sure everything (such as policy weights) is committed to shared device memory
             synchronize(self.cfg, self.device)
@@ -495,10 +506,17 @@ class Learner(Configurable):
 
         # This backward pass only affects self._beta
         beta_loss.backward()
-        self._beta_optim.step()
-        if self._beta < 0:
-            with torch.no_grad():
-                self._beta.copy_(0.0)
+        if self.lock_beta_optim:
+            with self.beta_param_server.policy_lock:
+                self._beta_optim.step()
+                if self._beta < 0:
+                    with torch.no_grad():
+                        self._beta.copy_(0.0)
+        else:
+            self._beta_optim.step()
+            if self._beta < 0:
+                with torch.no_grad():
+                    self._beta.copy_(0.0)
 
         return beta_loss.item()
 
@@ -714,6 +732,7 @@ class Learner(Configurable):
         timing = self.timing
         self.beta_losses = []
         fixup_grad_steps = 0
+        self.second_penalty_loops = []
         with torch.no_grad():
             early_stopping_tolerance = 1e-6
             early_stop = False
@@ -920,9 +939,12 @@ class Learner(Configurable):
                                 # make sure everything (such as policy weights) is committed to shared device memory
                                 synchronize(self.cfg, self.device)
 
+                    penalty_loops += 1
+
                     if constraint_satisfied:
                         break
 
+                self.second_penalty_loops.append(penalty_loops)
             # end of an epoch
             if self.lr_scheduler.invoke_after_each_epoch():
                 self.curr_lr = self.lr_scheduler.update(self.curr_lr, recent_kls)
@@ -1045,7 +1067,11 @@ class Learner(Configurable):
 
         # hold the lock while we alter the state of the normalizer since they can be used in other processes too
         with self.param_server.policy_lock:
-            normalized_obs = prepare_and_normalize_obs(self.actor_critic, obs)
+            if self.lock_beta_optim:
+                with self.beta_param_server.policy_lock:
+                    normalized_obs = prepare_and_normalize_obs(self.actor_critic, obs)
+            else:
+                normalized_obs = prepare_and_normalize_obs(self.actor_critic, obs)
 
         # restore original shape
         for key, x in normalized_obs.items():

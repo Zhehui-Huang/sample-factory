@@ -252,6 +252,12 @@ def add_rl_args(p: ArgumentParser):
         type=str2bool,
     )
     p.add_argument(
+        "--lock_beta_optim",
+        default=True,
+        type=str2bool,
+    )
+
+    p.add_argument(
         "--exploration_loss",
         default="entropy",
         type=str,
