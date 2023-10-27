@@ -511,12 +511,12 @@ class Learner(Configurable):
                 self._beta_optim.step()
                 if self._beta < 0:
                     with torch.no_grad():
-                        self._beta.copy_(0.0)
+                        self._beta.copy_(torch.tensor(0.0))
         else:
             self._beta_optim.step()
             if self._beta < 0:
                 with torch.no_grad():
-                    self._beta.copy_(0.0)
+                    self._beta.copy_(torch.tensor(0.0))
 
         return beta_loss.item()
 
