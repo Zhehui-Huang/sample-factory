@@ -4,7 +4,7 @@ from runs.dmlab.baseline import DMLAB30_BASELINE_CLI
 _params = ParamGrid([
     ('seed', [0000, 1111, 2222, 3333]),
     ('batch_size', [1024]),
-    ('eps_kl', [0.1, 0.2, 0.4]),
+    ('eps_kl', [0.1, 0.2, 0.5]),
 ])
 
 DMLAB30_CLI = DMLAB30_BASELINE_CLI + (
@@ -19,4 +19,4 @@ _experiment = Experiment(
     _params.generate_params(randomize=False),
 )
 
-RUN_DESCRIPTION = RunDescription('eps_kl', experiments=[_experiment])
+RUN_DESCRIPTION = RunDescription('eps_kl_v3', experiments=[_experiment])

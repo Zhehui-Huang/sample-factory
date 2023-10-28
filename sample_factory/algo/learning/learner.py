@@ -543,8 +543,6 @@ class Learner(Configurable):
         return beta_loss.item()
 
     def _violates_constraint(self, kl_div: torch.Tensor):
-        if kl_div is None:
-            return False
         if self._kl_target_stat == "max":
             return (kl_div > self._eps_kl).any()
         elif self._kl_target_stat == "mean":
