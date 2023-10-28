@@ -5,7 +5,7 @@ _params = ParamGrid([
     ('seed', [0000, 1111, 2222, 3333]),
     ('batch_size', [1024]),
     ('eps_kl', [0.5]),
-    ('target_coeff', [0.1, 0.5]),
+    ('target_coeff', [1.0, 2.0, 4.0, 8.0]),
 ])
 
 DMLAB30_CLI = DMLAB30_BASELINE_CLI + (
@@ -20,4 +20,4 @@ _experiment = Experiment(
     _params.generate_params(randomize=False),
 )
 
-RUN_DESCRIPTION = RunDescription('target_coeff_v2', experiments=[_experiment])
+RUN_DESCRIPTION = RunDescription('target_coeff_v3', experiments=[_experiment])
