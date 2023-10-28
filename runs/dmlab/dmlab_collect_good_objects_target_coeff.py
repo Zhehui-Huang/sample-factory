@@ -5,12 +5,12 @@ _params = ParamGrid([
     ('seed', [0000, 1111, 2222, 3333]),
     ('batch_size', [1024]),
     ('eps_kl', [0.5]),
-    ('target_coeff', [2.0, 5.0, 8.0]),
+    ('target_coeff', [0.1, 0.5]),
 ])
 
 DMLAB30_CLI = DMLAB30_BASELINE_CLI + (
     ' --env=dmlab_collect_good_objects --lock_beta_optim=True --beta_lr=0.1 '
-    '--train_for_env_steps=1000000000 --with_wandb=True --wandb_project=stabilized-rl '
+    '--train_for_env_steps=100000000 --with_wandb=True --wandb_project=stabilized-rl '
     '--wandb_group=sf-fixpo_dmlab_collect_good_objects --wandb_user=resl-mixppo'
 )
 
@@ -20,4 +20,4 @@ _experiment = Experiment(
     _params.generate_params(randomize=False),
 )
 
-RUN_DESCRIPTION = RunDescription('target_coeff', experiments=[_experiment])
+RUN_DESCRIPTION = RunDescription('target_coeff_v2', experiments=[_experiment])
