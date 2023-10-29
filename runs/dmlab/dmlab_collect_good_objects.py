@@ -9,7 +9,7 @@ _params = ParamGrid([
 
 DMLAB30_CLI = DMLAB30_BASELINE_CLI + (
     ' --env=dmlab_collect_good_objects --lock_beta_optim=True --beta_lr=0.1 --target_coeff=10.0 '
-    '--train_for_env_steps=1000000000 --with_wandb=True --wandb_project=stabilized-rl '
+    '--train_for_env_steps=100000000 --with_wandb=True --wandb_project=stabilized-rl '
     '--wandb_group=sf-fixpo_dmlab_collect_good_objects --wandb_user=resl-mixppo'
 )
 
