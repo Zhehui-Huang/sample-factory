@@ -1,5 +1,5 @@
 python -m sample_factory.launcher.run \
---run=runs.dmlab.dmlab_collect_good_objects \
+--run=runs.dmlab.origin_dmlab_collect_good_objects \
 --backend=slurm --slurm_workdir=sf2_slurm_output \
 --experiment_suffix=slurm --pause_between=1 \
 --slurm_gpus_per_job=1 --slurm_cpus_per_gpu=36 \
