@@ -51,6 +51,7 @@ DMLAB_ENVS = [
     DmLabSpec("dmlab_nonmatch", "contributed/dmlab30/rooms_select_nonmatching_object"),
     DmLabSpec("dmlab_watermaze", "contributed/dmlab30/rooms_watermaze"),
     DmLabSpec("dmlab_collect_good_objects", "contributed/dmlab30/rooms_collect_good_objects_train"),
+    DmLabSpec("dmlab_rooms_exploit_deferred_effects", "contributed/dmlab30/rooms_exploit_deferred_effects_train"),
 ]
 
 
