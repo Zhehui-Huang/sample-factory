@@ -1,4 +1,3 @@
-
 python -m sample_factory.launcher.run \
 --run=runs.dmlab.origin_dmlab_30 \
 --backend=slurm --slurm_workdir=sf2_slurm_output \
