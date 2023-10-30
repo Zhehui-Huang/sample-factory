@@ -31,6 +31,26 @@ from sample_factory.utils.timing import Timing
 from sample_factory.utils.typing import ActionDistribution, Config, InitModelData, PolicyID
 from sample_factory.utils.utils import ensure_dir_exists, experiment_dir, log
 
+def explained_variance(y_pred, y_true):
+    """
+    Computes fraction of variance that ypred explains about y.
+    Returns 1 - Var[y-ypred] / Var[y]
+    interpretation:
+        ev=0  =>  might as well have predicted zero
+        ev=1  =>  perfect prediction
+        ev<0  =>  worse than just predicting zero
+    :param y_pred: the prediction
+    :param y_true: the expected value
+    :return: explained variance of ypred and y
+    """
+    assert y_true.ndim == 1 and y_pred.ndim == 1
+    var_y = torch.var(y_true, unbiased=False).item()
+    y_explained_variance = np.nan if var_y == 0 else 1 - torch.var(y_true - y_pred, unbiased=False) / var_y
+
+    unbiased_var_y = torch.var(y_true, unbiased=True).item()
+    unbiased_y_explained_variance = np.nan if unbiased_var_y == 0 else 1 - torch.var(y_true - y_pred, unbiased=True) / unbiased_var_y
+
+    return y_explained_variance.item(), unbiased_y_explained_variance.item()
 
 class LearningRateScheduler:
     def update(self, current_lr, recent_kls):
@@ -873,6 +893,8 @@ class Learner(Configurable):
             stats.adv_mean = var.adv_mean
 
         stats.max_abs_logprob = torch.abs(var.mb.action_logits).max()
+        stats.explained_var, stats.explained_var_unbiased = explained_variance(
+            var.gpu_buffer['values'].flatten(), var.gpu_buffer['returns'].flatten())
 
         if hasattr(var.action_distribution, "summaries"):
             stats.update(var.action_distribution.summaries())
