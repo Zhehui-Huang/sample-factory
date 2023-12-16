@@ -22,6 +22,7 @@ SBATCH_TEMPLATE_DEFAULT = (
 
 
 def add_slurm_args(parser):
+    parser.add_argument("--slurm_gpus_type", default='', type=str, help="GPUs type")
     parser.add_argument("--slurm_gpus_per_job", default=1, type=int, help="GPUs in a single SLURM process")
     parser.add_argument(
         "--slurm_cpus_per_gpu", default=14, type=int, help="Max allowed number of CPU cores per allocated GPU"
@@ -112,7 +113,11 @@ def run_slurm(run_description, args):
     for sbatch_file in sbatch_files:
         idx += 1
         sbatch_fname = os.path.basename(sbatch_file)
-        cmd = f"sbatch {partition}--gres=gpu:{args.slurm_gpus_per_job} -c {num_cpus} --parsable --output {workdir}/{sbatch_fname}-slurm-%j.out {sbatch_file}"
+        if args.slurm_gpus_type == '':
+            cmd = f"sbatch {partition}--gres=gpu:{args.slurm_gpus_per_job} -c {num_cpus} --parsable --output {workdir}/{sbatch_fname}-slurm-%j.out {sbatch_file}"
+        else:
+            cmd = f"sbatch {partition}--gres=gpu:{args.slurm_gpus_type}:{args.slurm_gpus_per_job} -c {num_cpus} --parsable --output {workdir}/{sbatch_fname}-slurm-%j.out {sbatch_file}"
+
         log.info("Executing %s...", cmd)
 
         if args.slurm_print_only:
