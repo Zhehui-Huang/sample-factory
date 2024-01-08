@@ -114,9 +114,9 @@ def run_slurm(run_description, args):
         idx += 1
         sbatch_fname = os.path.basename(sbatch_file)
         if args.slurm_gpus_type == '':
-            cmd = f"sbatch {partition}--gres=gpu:{args.slurm_gpus_per_job} -c {num_cpus} --parsable --output {workdir}/{sbatch_fname}-slurm-%j.out {sbatch_file}"
+            cmd = f"sbatch --exclude=brain7.usc.edu {partition}--gres=gpu:{args.slurm_gpus_per_job} -c {num_cpus} --parsable --output {workdir}/{sbatch_fname}-slurm-%j.out {sbatch_file}"
         else:
-            cmd = f"sbatch {partition}--gres=gpu:{args.slurm_gpus_type}:{args.slurm_gpus_per_job} -c {num_cpus} --parsable --output {workdir}/{sbatch_fname}-slurm-%j.out {sbatch_file}"
+            cmd = f"sbatch --exclude=brain7.usc.edu {partition}--gres=gpu:{args.slurm_gpus_type}:{args.slurm_gpus_per_job} -c {num_cpus} --parsable --output {workdir}/{sbatch_fname}-slurm-%j.out {sbatch_file}"
 
         log.info("Executing %s...", cmd)
 
