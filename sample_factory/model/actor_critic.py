@@ -192,10 +192,11 @@ class ActorCriticSeparateWeights(ActorCritic):
         cfg: Config,
     ):
         super().__init__(obs_space, action_space, cfg)
-
+        cfg['is_critic'] = False
         self.actor_encoder = model_factory.make_model_encoder_func(cfg, obs_space)
         self.actor_core = model_factory.make_model_core_func(cfg, self.actor_encoder.get_out_size())
 
+        cfg['is_critic'] = True
         self.critic_encoder = model_factory.make_model_encoder_func(cfg, obs_space)
         self.critic_core = model_factory.make_model_core_func(cfg, self.critic_encoder.get_out_size())
 
@@ -209,7 +210,7 @@ class ActorCriticSeparateWeights(ActorCritic):
         self.decoders = [self.actor_decoder, self.critic_decoder]
 
         self.critic_linear = nn.Linear(self.critic_decoder.get_out_size(), 1)
-        self.action_parameterization = self.get_action_parameterization(self.critic_decoder.get_out_size())
+        self.action_parameterization = self.get_action_parameterization(self.actor_decoder.get_out_size())
 
         self.apply(self.initialize_weights)
 
@@ -249,7 +250,7 @@ class ActorCriticSeparateWeights(ActorCritic):
         return self.core_func(head_output, rnn_states)
 
     def forward_tail(self, core_output, values_only: bool, sample_actions: bool) -> TensorDict:
-        core_outputs = core_output.chunk(len(self.cores), dim=1)
+        core_outputs = core_output.split([self.actor_core.get_out_size(), self.critic_decoder.get_out_size()], dim=1)
 
         # second core output corresponds to the critic
         critic_decoder_output = self.critic_decoder(core_outputs[1])
