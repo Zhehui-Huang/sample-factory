@@ -58,6 +58,15 @@ class ActionParameterizationContinuousNonAdaptiveStddev(ActionsParameterization)
         initial_stddev.fill_(math.log(self.cfg.initial_stddev))
         self.learned_stddev = nn.Parameter(initial_stddev, requires_grad=True)
 
+    def reset_action_stddev(self, new_stddev=None):
+        if new_stddev is None:
+            new_stddev = self.cfg.initial_stddev
+            with torch.no_grad():
+                self.learned_stddev.fill_(math.log(new_stddev))
+        else:
+            with torch.no_grad():
+                self.learned_stddev.fill_(math.log(new_stddev))
+
     def forward(self, actor_core_output: Tensor):
         action_means = self.distribution_linear(actor_core_output)
         if self.tanh_scale > 0:

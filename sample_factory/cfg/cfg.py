@@ -31,6 +31,19 @@ def add_basic_cli_args(p: ArgumentParser):
     )
 
     p.add_argument(
+        "--finetune_stage",
+        default=False,
+        type=str2bool,
+        help="In finetune stage or not.",
+    )
+    p.add_argument(
+        "--finetune_reset_act_std",
+        default=False,
+        type=str2bool,
+        help="When finetune, reset action std or not.",
+    )
+
+    p.add_argument(
         "--device",
         default="gpu",
         type=str,
