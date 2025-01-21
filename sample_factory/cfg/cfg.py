@@ -42,6 +42,12 @@ def add_basic_cli_args(p: ArgumentParser):
         type=str2bool,
         help="When finetune, reset action std or not.",
     )
+    p.add_argument(
+        "--finetune_stddev",
+        default=0.5,
+        type=float,
+        help="Finetune stddev",
+    )
 
     p.add_argument(
         "--device",
