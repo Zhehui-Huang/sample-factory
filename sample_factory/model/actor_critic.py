@@ -38,10 +38,6 @@ class ActorCritic(nn.Module, Configurable):
 
         self.last_action_distribution = None  # to be populated after each forward step
 
-        # Aux
-        self.finetune_stage = cfg.finetune_stage
-        self.finetune_reset_act_std = cfg.finetune_reset_act_std
-
     def get_action_parameterization(self, decoder_output_size: int):
         if not self.cfg.adaptive_stddev and is_continuous_action_space(self.action_space):
             action_parameterization = ActionParameterizationContinuousNonAdaptiveStddev(
@@ -49,9 +45,6 @@ class ActorCritic(nn.Module, Configurable):
                 decoder_output_size,
                 self.action_space,
             )
-            if self.finetune_stage and self.finetune_reset_act_std:
-                # Reset to a new action stddev value during fine-tuning
-                action_parameterization.reset_action_stddev()
         else:
             action_parameterization = ActionParameterizationDefault(self.cfg, decoder_output_size, self.action_space)
 

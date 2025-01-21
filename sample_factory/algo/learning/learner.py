@@ -289,6 +289,10 @@ class Learner(Configurable):
             self.env_steps = checkpoint_dict["env_steps"]
             self.best_performance = checkpoint_dict.get("best_performance", self.best_performance)
         self.actor_critic.load_state_dict(checkpoint_dict["model"])
+
+        if self.cfg.finetune_stage and self.cfg.finetune_reset_act_std:
+            self.actor_critic.action_parameterization.reset_action_stddev()
+
         self.optimizer.load_state_dict(checkpoint_dict["optimizer"])
         self.curr_lr = checkpoint_dict.get("curr_lr", self.cfg.learning_rate)
 
