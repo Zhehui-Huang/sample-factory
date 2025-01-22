@@ -292,9 +292,8 @@ class Learner(Configurable):
 
         if self.cfg.finetune_stage and self.cfg.finetune_reset_act_std:
             self.actor_critic.action_parameterization.reset_action_stddev(new_stddev=self.cfg.finetune_stddev)
-        else:
-            self.optimizer.load_state_dict(checkpoint_dict["optimizer"])
 
+        self.optimizer.load_state_dict(checkpoint_dict["optimizer"])
         self.curr_lr = checkpoint_dict.get("curr_lr", self.cfg.learning_rate)
 
         log.info(f"Loaded experiment state at {self.train_step=}, {self.env_steps=}")
