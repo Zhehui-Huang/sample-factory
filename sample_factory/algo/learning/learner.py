@@ -644,8 +644,15 @@ class Learner(Configurable):
                 adv = mb.advantages
                 targets = mb.returns
 
-            adv_std, adv_mean = torch.std_mean(masked_select(adv, valids, num_invalids))
-            adv = (adv - adv_mean) / torch.clamp_min(adv_std, 1e-7)  # normalize advantage
+            adv_masked_select = masked_select(adv, valids, num_invalids)
+            if adv_masked_select.numel() == 0:
+                # all samples are invalid
+                adv_mean = torch.tensor(0.0, device=adv.device)
+                adv_std = torch.tensor(1.0, device=adv.device)
+                adv = torch.zeros_like(adv)  # Reset advantages to zero
+            else:
+                adv_std, adv_mean = torch.std_mean(adv_masked_select)
+                adv = (adv - adv_mean) / torch.clamp_min(adv_std, 1e-7)  # normalize advantage
 
         with self.timing.add_time("losses"):
             # noinspection PyTypeChecker
