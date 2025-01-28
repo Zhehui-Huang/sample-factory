@@ -423,7 +423,7 @@ class Learner(Configurable):
             synchronize(self.cfg, self.device)
             # this will force policy update on the inference worker (policy worker)
             # we add max_policy_lag steps so that all experience currently in batches is invalidated
-            self.train_step += self.cfg.max_policy_lag + 1
+            self.train_step += int(max(self.cfg.max_policy_lag // 1000, 1000)) + 1
             self.policy_versions_tensor[self.policy_id] = self.train_step
 
             self.policy_to_load = None
@@ -645,7 +645,7 @@ class Learner(Configurable):
                 targets = mb.returns
 
             adv_masked_select = masked_select(adv, valids, num_invalids)
-            if adv_masked_select.numel() == 0:
+            if adv_masked_select.numel() < 2:
                 # all samples are invalid
                 adv_mean = torch.tensor(0.0, device=adv.device)
                 adv_std = torch.tensor(1.0, device=adv.device)
