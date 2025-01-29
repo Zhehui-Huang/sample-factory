@@ -323,6 +323,9 @@ class PopulationBasedTraining(AlgoObserver, EventLoopObject):
 
         log.debug("PBT best policies: %r, worst policies %r", best_policies, worst_policies)
 
+        target_objectives_dict = {i: o for i, o in enumerate(target_objectives)}
+        log.debug("Target objectives: %r", target_objectives_dict)
+
         # to make the code below uniform, this means keep our own parameters and cfg
         # we only take parameters and cfg from another policy if certain conditions are met (see below)
         replacement_policy = policy_id
