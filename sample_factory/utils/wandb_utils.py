@@ -47,6 +47,7 @@ def init_wandb(cfg):
             tags=cfg.wandb_tags,
             resume="allow",
             settings=wandb.Settings(start_method="fork"),
+            mode=cfg.wandb_mode,
         )
 
     log.debug("Initializing WandB...")

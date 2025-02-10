@@ -769,6 +769,7 @@ def add_wandb_args(p: ArgumentParser):
         nargs="*",
         help="Tags can help with finding experiments in WandB web console",
     )
+    p.add_argument("--wandb_mode", default="online", type=str, choices=["online", "offline", "disabled"], help="WandB mode")
 
 
 def add_pbt_args(p: ArgumentParser):
