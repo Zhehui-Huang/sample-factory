@@ -93,7 +93,7 @@ def run(run_description, args):
                 )
                 envvars["CUDA_VISIBLE_DEVICES"] = f"{best_gpu}"
 
-            log.info("Starting process %r", cmd_tokens)
+            # log.info("Starting process %r", cmd_tokens)
 
             if exp_env_vars is not None:
                 for key, value in exp_env_vars.items():

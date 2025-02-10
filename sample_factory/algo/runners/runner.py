@@ -116,7 +116,7 @@ class Runner(EventLoopObject, Configurable):
 
         self.last_report = time.time()
 
-        self.report_interval_sec = 5.0
+        self.report_interval_sec = 100.0
         self.avg_stats_intervals = (2, 12, 60)  # by default: 10 seconds, 60 seconds, 5 minutes
         self.summaries_interval_sec = self.cfg.experiment_summaries_interval  # sec
         self.heartbeat_report_sec = self.cfg.heartbeat_reporting_interval

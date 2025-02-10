@@ -26,7 +26,7 @@ from sample_factory.utils.utils import init_file_logger, log
 
 def init_learner_process(sf_context: SampleFactoryContext, learner_worker: LearnerWorker):
     set_global_context(sf_context)
-    log.info(f"{learner_worker.object_id}\tpid {os.getpid()}\tparent {os.getppid()}")
+    # log.info(f"{learner_worker.object_id}\tpid {os.getpid()}\tparent {os.getppid()}")
 
     # workers should ignore Ctrl+C because the termination is handled in the event loop by a special msg
     import signal as os_signal

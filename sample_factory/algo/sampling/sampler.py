@@ -283,7 +283,7 @@ class ParallelSampler(Sampler):
         log.debug("Starting all processes...")
 
         def start_process(p):
-            log.debug(f"Starting process {p.name}")
+            # log.debug(f"Starting process {p.name}")
             p.start()
 
         pool_size = min(16, len(self.processes))

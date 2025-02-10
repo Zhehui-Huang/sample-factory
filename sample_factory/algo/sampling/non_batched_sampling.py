@@ -433,7 +433,7 @@ class NonBatchedVectorEnvRunner(VectorEnvRunner):
                 env_i_split = self.num_envs * self.split_idx + env_i
                 decorrelate_steps = self.cfg.rollout * env_i_split
 
-                log.info("Decorrelating experience for %d frames...", decorrelate_steps)
+                # log.info("Decorrelating experience for %d frames...", decorrelate_steps)
                 for decorrelate_step in range(decorrelate_steps):
                     actions = [e.action_space.sample() for _ in range(self.num_agents)]
                     observations, rew, terminated, truncated, info = e.step(actions)

@@ -220,7 +220,7 @@ class Batcher(HeartbeatStoppableEventLoopObject):
                 if self.cfg.async_rl:
                     self._release_traj_tensors(batch_idx)
                     if not self.available_batches:
-                        debug_log_every_n(50, "Signal inference workers to stop experience collection...")
+                        debug_log_every_n(500, "Signal inference workers to stop experience collection...")
                         self.stop_experience_collection.emit()
 
     def on_training_batch_released(self, batch_idx: int, training_iteration: int):
@@ -232,7 +232,7 @@ class Batcher(HeartbeatStoppableEventLoopObject):
                 self._release_traj_tensors(batch_idx)
 
             if not self.available_batches and self.cfg.async_rl:
-                debug_log_every_n(50, "Signal inference workers to resume experience collection...")
+                debug_log_every_n(500, "Signal inference workers to resume experience collection...")
                 self.resume_experience_collection.emit()
 
             self.available_batches.append(batch_idx)

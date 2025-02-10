@@ -42,7 +42,7 @@ PrepareOutputsFunc = Callable[[int, TensorDict, List], AdvanceRolloutSignals]
 
 def init_inference_process(sf_context: SampleFactoryContext, worker: InferenceWorker):
     set_global_context(sf_context)
-    log.info(f"{worker.object_id}\tpid {os.getpid()}\tparent {os.getppid()}")
+    # log.info(f"{worker.object_id}\tpid {os.getpid()}\tparent {os.getppid()}")
 
     # workers should ignore Ctrl+C because the termination is handled in the event loop by a special msg
     import signal as os_signal
@@ -175,11 +175,11 @@ class InferenceWorker(HeartbeatStoppableEventLoopObject, Configurable):
         self.is_initialized = True
 
     def should_stop_experience_collection(self):
-        debug_log_every_n(50, f"{self.object_id}: stopping experience collection")
+        # debug_log_every_n(50, f"{self.object_id}: stopping experience collection")
         self.inference_loop.stop()
 
     def should_resume_experience_collection(self):
-        debug_log_every_n(50, f"{self.object_id}: resuming experience collection")
+        # debug_log_every_n(50, f"{self.object_id}: resuming experience collection")
         self.inference_loop.start()
 
     def _batch_slices(self, timing):

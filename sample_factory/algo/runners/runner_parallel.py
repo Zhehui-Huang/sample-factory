@@ -50,9 +50,9 @@ class ParallelRunner(Runner):
         super()._on_start()
 
     def _start_processes(self):
-        log.debug("Starting all processes...")
+        # log.debug("Starting all processes...")
         for p in self.processes:
-            log.debug(f"Starting process {p.name}")
+            # log.debug(f"Starting process {p.name}")
             p.start()
             self.event_loop.process_events()
 

@@ -31,10 +31,10 @@ from sample_factory.utils.utils import (
 
 
 def init_rollout_worker_process(sf_context: SampleFactoryContext, worker: RolloutWorker):
-    log.debug(f"Rollout worker {worker.worker_idx} starting...")
+    # log.debug(f"Rollout worker {worker.worker_idx} starting...")
 
     set_global_context(sf_context)
-    log.info(f"ROLLOUT worker {worker.worker_idx}\tpid {os.getpid()}\tparent {os.getppid()}")
+    # log.info(f"ROLLOUT worker {worker.worker_idx}\tpid {os.getpid()}\tparent {os.getppid()}")
 
     # workers should ignore Ctrl+C because the termination is handled in the event loop by a special msg
     import signal as os_signal

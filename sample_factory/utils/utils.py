@@ -352,7 +352,7 @@ def set_process_cpu_affinity(worker_idx, num_workers):
         curr_process_cores = [available_cores[c] for c in core_indices]
         curr_process.cpu_affinity(curr_process_cores)
 
-    log.debug("Worker %d uses CPU cores %r", worker_idx, curr_process.cpu_affinity())
+    # log.debug("Worker %d uses CPU cores %r", worker_idx, curr_process.cpu_affinity())
 
 
 # working with filesystem

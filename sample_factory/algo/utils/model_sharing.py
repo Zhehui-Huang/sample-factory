@@ -133,7 +133,7 @@ class ParameterClientAsync(ParameterClient):
             self.latest_policy_version = server_policy_version
 
             self.num_policy_updates += 1
-            if self.num_policy_updates % 10 == 0:
+            if self.num_policy_updates % 1000 == 0:
                 log.info(
                     "Updated weights for policy %d, policy_version %d (%s)",
                     self.policy_id,
