@@ -645,7 +645,7 @@ class Learner(Configurable):
                 targets = mb.returns
 
             adv_masked_select = masked_select(adv, valids, num_invalids)
-            if adv_masked_select.numel() == 0:
+            if adv_masked_select.numel() < 2:
                 # all samples are invalid
                 adv_mean = torch.tensor(0.0, device=adv.device)
                 adv_std = torch.tensor(1.0, device=adv.device)

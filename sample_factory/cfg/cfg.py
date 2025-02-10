@@ -48,6 +48,12 @@ def add_basic_cli_args(p: ArgumentParser):
         type=float,
         help="Finetune stddev",
     )
+    p.add_argument(
+        "--finetune_continue_wb",
+        default=False,
+        type=str2bool,
+        help="Finetune contrinue log based on previous w&b",
+    )
 
     p.add_argument(
         "--device",
@@ -763,6 +769,7 @@ def add_wandb_args(p: ArgumentParser):
         nargs="*",
         help="Tags can help with finding experiments in WandB web console",
     )
+    p.add_argument("--wandb_mode", default="online", type=str, choices=["online", "offline", "disabled"], help="WandB mode")
 
 
 def add_pbt_args(p: ArgumentParser):
