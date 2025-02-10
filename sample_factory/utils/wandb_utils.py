@@ -13,7 +13,7 @@ def init_wandb(cfg):
         log.debug("Weights and Biases integration disabled")
         return
 
-    if "wandb_unique_id" not in cfg:
+    if "wandb_unique_id" not in cfg or ("wandb_unique_id" in cfg and cfg.finetune_continue_wb):
         # if we're going to restart the experiment, this will be saved to a json file
         cfg.wandb_unique_id = f'{cfg.experiment}_{datetime.now().strftime("%Y%m%d_%H%M%S_%f")}'
     elif cfg.wandb_unique_id is not None and cfg.finetune_stage:

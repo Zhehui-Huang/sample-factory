@@ -48,6 +48,12 @@ def add_basic_cli_args(p: ArgumentParser):
         type=float,
         help="Finetune stddev",
     )
+    p.add_argument(
+        "--finetune_continue_wb",
+        default=False,
+        type=str2bool,
+        help="Finetune contrinue log based on previous w&b",
+    )
 
     p.add_argument(
         "--device",
