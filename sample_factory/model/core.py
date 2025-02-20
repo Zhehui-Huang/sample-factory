@@ -79,7 +79,13 @@ class ModelCoreIdentity(ModelCore):
 
 def default_make_core_func(cfg: Config, core_input_size: int) -> ModelCore:
     if cfg.use_rnn:
-        core = ModelCoreRNN(cfg, core_input_size)
+        if not cfg.is_critic:
+            if cfg.actor_use_rnn:
+                core = ModelCoreRNN(cfg, core_input_size)
+            else:
+                core = ModelCoreIdentity(cfg, core_input_size)
+        else:
+            core = ModelCoreRNN(cfg, core_input_size)
     else:
         core = ModelCoreIdentity(cfg, core_input_size)
 

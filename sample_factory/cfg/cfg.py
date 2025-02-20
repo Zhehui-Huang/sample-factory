@@ -552,6 +552,7 @@ def add_model_args(p: ArgumentParser):
 
     # model core settings (core is identity function if we're not using RNNs)
     p.add_argument("--use_rnn", default=True, type=str2bool, help="Whether to use RNN core in a policy or not")
+    p.add_argument("--actor_use_rnn", default=False, type=str2bool, help="Whether to use RNN core in actor or not")
     p.add_argument(
         "--rnn_size",
         default=512,
