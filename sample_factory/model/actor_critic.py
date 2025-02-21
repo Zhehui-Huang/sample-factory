@@ -291,7 +291,7 @@ class ActorCriticSeparateWeights(ActorCritic):
     def forward_tail(
         self, core_output, values_only: bool, sample_actions: bool, action_mask: Optional[Tensor] = None
     ) -> TensorDict:
-        core_outputs = core_output.chunk(len(self.cores), dim=1)
+        core_outputs = core_output.split([self.actor_core.get_out_size(), self.critic_decoder.get_out_size()], dim=1)
 
         # second core output corresponds to the critic
         critic_decoder_output = self.critic_decoder(core_outputs[1])
