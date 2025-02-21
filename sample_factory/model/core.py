@@ -11,6 +11,10 @@ class ModelCore(ModelModule, ABC):
     def __init__(self, cfg: Config):
         super().__init__(cfg)
         self.core_output_size = -1  # to be overridden in derived classes
+        self.core_input_size = -1  # to be overridden in derived classes
+
+    def get_in_size(self):
+        return self.core_input_size
 
     def get_out_size(self) -> int:
         return self.core_output_size
@@ -31,6 +35,7 @@ class ModelCoreRNN(ModelCore):
         else:
             raise RuntimeError(f"Unknown RNN type {cfg.rnn_type}")
 
+        self.core_input_size = input_size
         self.core_output_size = cfg.rnn_size
         self.rnn_num_layers = cfg.rnn_num_layers
 
@@ -70,6 +75,7 @@ class ModelCoreIdentity(ModelCore):
     def __init__(self, cfg, input_size):
         super().__init__(cfg)
         self.cfg = cfg
+        self.core_input_size = input_size
         self.core_output_size = input_size
 
     # noinspection PyMethodMayBeStatic
