@@ -242,7 +242,7 @@ class ActorCriticSeparateWeights(ActorCritic):
             # but this time using concatenation - unpack, cat and pack.
 
             unpacked_head_output, lengths = pad_packed_sequence(head_output)
-            unpacked_head_output_split = unpacked_head_output.chunk(num_cores, dim=2)
+            unpacked_head_output_split = unpacked_head_output.split([self.actor_core.get_out_size(), self.critic_decoder.get_out_size()], dim=2)
             head_outputs_split = [
                 pack_padded_sequence(unpacked_head_output_split[i], lengths, enforce_sorted=False)
                 for i in range(num_cores)
@@ -258,7 +258,7 @@ class ActorCriticSeparateWeights(ActorCritic):
             unpacked_outputs = torch.cat(unpacked_outputs, dim=2)
             outputs = pack_padded_sequence(unpacked_outputs, lengths, enforce_sorted=False)
         else:
-            head_outputs_split = head_output.chunk(num_cores, dim=1)
+            head_outputs_split = head_output.split([self.actor_core.get_out_size(), self.critic_decoder.get_out_size()], dim=1)
             rnn_states_split = rnn_states.chunk(num_cores, dim=1)
 
             outputs, new_rnn_states = [], []
