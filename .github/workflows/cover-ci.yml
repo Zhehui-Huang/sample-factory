@@ -4,18 +4,16 @@ on:
   push:
     branches:
     - master
-    - sf2
   pull_request:
     branches:
     - master
-    - sf2
 
 jobs:
   run-coverage:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.8]
+        python-version: [3.9]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -30,8 +28,9 @@ jobs:
         echo $CONDA/bin >> $GITHUB_PATH
     - name: Install conda env & dependencies
       run: |
-       pip install -e '.[atari, mujoco, envpool]'
-       conda list
+        conda install python=${{ matrix.python-version }}
+        pip install -e '.[atari, mujoco, envpool, pettingzoo, onnx]'
+        conda list
     - name: Install codecov dependencies
       run: |
         pip install pytest

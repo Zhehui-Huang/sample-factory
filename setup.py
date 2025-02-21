@@ -1,3 +1,5 @@
+import platform
+
 import setuptools
 from setuptools import setup
 
@@ -14,7 +16,19 @@ with open("README.md", "r") as f:
 
 _atari_deps = ["gymnasium[atari, accept-rom-license]"]
 _mujoco_deps = ["gymnasium[mujoco]", "mujoco<2.5"]
+_nethack_deps = [
+    "numba ~= 0.58",
+    "pandas ~= 2.1",
+    "matplotlib ~= 3.8",
+    "seaborn ~= 0.12",
+    "scipy ~= 1.11",
+    "shimmy",
+    "tqdm ~= 4.66",
+    "debugpy ~= 1.6",
+]
 _envpool_deps = ["envpool"]
+_pettingzoo_deps = ["pettingzoo[classic]"]
+_onnx_deps = ["onnx", "onnxruntime"]
 
 _docs_deps = [
     "mkdocs-material",
@@ -25,13 +39,18 @@ _docs_deps = [
     "mkdocs-git-authors-plugin",
 ]
 
+
+def is_macos():
+    return platform.system() == "Darwin"
+
+
 setup(
     # Information
     name="sample-factory",
     description="High throughput asynchronous reinforcement learning framework",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    version="2.1.2",
+    version="2.1.3",
     url="https://github.com/alex-petrenko/sample-factory",
     author="Aleksei Petrenko",
     license="MIT",
@@ -53,20 +72,25 @@ setup(
         # "faster-fifo>=1.4.2,<2.0",  <-- installed by signal-slot-mp
         "signal-slot-mp>=1.0.3,<2.0",
         "filelock",
-        "opencv-python",
         "wandb>=0.12.9",
         "huggingface-hub>=0.10.0,<1.0",
         "pandas",
+        "opencv-python",
     ],
     extras_require={
         # some tests require Atari and Mujoco so let's make sure dev environment has that
         "dev": ["black", "isort>=5.12", "pytest<8.0", "flake8", "pre-commit", "twine"]
         + _docs_deps
         + _atari_deps
-        + _mujoco_deps,
+        + _mujoco_deps
+        + _onnx_deps
+        + _pettingzoo_deps,
         "atari": _atari_deps,
         "envpool": _envpool_deps,
         "mujoco": _mujoco_deps,
+        "nethack": _nethack_deps,
+        "onnx": _onnx_deps,
+        "pettingzoo": _pettingzoo_deps,
         "vizdoom": ["vizdoom<2.0", "gymnasium[classic_control]"],
         # "dmlab": ["dm_env"],  <-- these are just auxiliary packages, the main package has to be built from sources
     },
