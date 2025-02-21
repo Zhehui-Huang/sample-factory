@@ -147,8 +147,11 @@ def build_rnn_inputs(x, dones_cpu, rnn_states, T: int):
     # (1 - is_new_episode.view(-1, 1)).index_select(0, rollout_starts) gives us a zero for every beginning of
     # the sequence that is actually also a start of a new episode, and by multiplying this RNN state by zero
     # we ensure no information transfer across episode boundaries.
-    rnn_states = rnn_states.index_select(0, rollout_starts)
-    is_same_episode = (1 - is_new_episode.view(-1, 1)).index_select(0, rollout_starts)
+    # Create a mask of same size as original rnn_states
+    is_same_episode = torch.ones_like(is_new_episode).view(-1, 1)  # Shape: (N*T, 1)
+    is_same_episode[rollout_starts] = (1 - is_new_episode.index_select(0, rollout_starts)).view(-1, 1)
+
+    # Apply the mask to all rnn states
     rnn_states = rnn_states * is_same_episode
 
     return x_seq, rnn_states, inverted_select_inds

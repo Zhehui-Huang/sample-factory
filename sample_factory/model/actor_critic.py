@@ -221,14 +221,20 @@ class ActorCriticSeparateWeights(ActorCritic):
         """
 
         num_cores = len(self.cores)
-        head_outputs_split = head_output.chunk(num_cores, dim=1)
-        rnn_states_split = rnn_states.chunk(num_cores, dim=1)
+        try:
+            head_outputs_split = head_output.data.chunk(num_cores, dim=1)
+            rnn_states_split = rnn_states.chunk(num_cores, dim=1)
+        except:
+            raise ValueError(f"Failed to split head_output/rnn_states into {num_cores} parts")
 
         outputs, new_rnn_states = [], []
-        for i, c in enumerate(self.cores):
-            output, new_rnn_state = c(head_outputs_split[i], rnn_states_split[i])
-            outputs.append(output)
-            new_rnn_states.append(new_rnn_state)
+        try:
+            for i, c in enumerate(self.cores):
+                output, new_rnn_state = c(head_outputs_split[i], rnn_states_split[i])
+                outputs.append(output)
+                new_rnn_states.append(new_rnn_state)
+        except:
+            raise ValueError(f"Failed to process core {i}")
 
         outputs = torch.cat(outputs, dim=1)
         new_rnn_states = torch.cat(new_rnn_states, dim=1)
